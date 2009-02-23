@@ -1,0 +1,15 @@
+database:
+  file: sync-apps.sqlite
+
+domain:
+  name: <your google apps domain>
+  user: <an administrator for your domain>
+  password: <the administrator password>
+
+ldap:
+  host: <hostname of your ldap server>
+  port: <port to connect on your ldap server>
+  url:  <url to your ldap server>
+  base: <base dn for data>
+  user: <ldap user who can read required attributes>
+  password: <ldap users password>

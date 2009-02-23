@@ -1,0 +1,15 @@
+CREDITS
+History.txt
+Manifest.txt
+README.txt
+Rakefile
+TODO
+bin/config.yml
+bin/sync-google-apps
+gdata2.gemspec
+lib/gdata.rb
+lib/gdata/apps.rb
+lib/gdata/apps/email.rb
+lib/gdata/apps/provisioning.rb
+lib/gdata/messages.rb
+scripts/test.rb

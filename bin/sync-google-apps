@@ -1,0 +1,102 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'sqlite3'
+require 'net/ldap'
+require 'optparse'
+
+$options = OpenStruct.new
+$source = nil
+
+class State
+  def initialize(fn, verbose=false)
+    @verbose = verbose
+    
+    if !File.exists?(fn)
+      needs_initialization = 1
+    end
+    
+    if @verbose
+      puts "Creating new state database."
+    end
+    
+    @db = SQLite3::Database.new(fn)
+    
+    if needs_initialization
+      do_initialization
+    end
+  end
+  
+  def do_initialization
+    if @verbose
+      puts "Initializing state database."
+    end
+    
+    @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
+  end
+
+  def reset_stat
+    if @verbose
+      puts "Resetting state database."
+    end
+    
+    @db.execute("DELETE * FROM users;")
+  end
+  
+  def show_users
+    puts "Dumping users:"
+
+    @db.execute("SELECT * FROM users;") do |user|
+      puts user
+    end
+
+  end
+end
+
+OptionParser.new do |opts|
+  $options.verbose = false
+  $options.config = 'config.yml'
+
+  opts.banner = "Usage: sync-apps.rb [options]"
+
+  opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
+    $options.config = o.to_s
+  end
+
+  opts.on_tail("--version", "Show version") do
+    puts OptionParser::Version.join('.')
+  end
+end.parse!
+
+config = YAML.load_file($options.config)
+
+if config["source"]["type"] == "ldap"
+  args = {
+    :host => config["source"]["host"],
+    :port => config["source"]["port"],
+    :auth => {
+      :method => :simple,
+      :username => config["source"]["user"],
+      :password => config["source"]["password"]
+    }
+  }
+
+  if config["source"]["port"].to_i == 636
+    args[:encryption] = :simple_tls
+  end
+
+  $source = Net::LDAP.new args
+
+  attributes = config["attributes"].values
+  filter = Net::LDAP::Filter.construct(config["source"]["filter"])
+  $source.search(:base => config["source"]["base"],
+               :filter => filter, :attributes => attributes) do |entry|
+    puts "DN: #{entry.dn}"
+    entry.each do |attr,val|
+      puts "  #{attr} => #{val}"
+    end
+  end
+end
+
+user = config["apps"]["user"]+"@"+config["apps"]["domain"]
+state_db = State.new(config["state"]["file"])
