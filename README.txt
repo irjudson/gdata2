@@ -42,7 +42,7 @@ TODO: write new
 == LICENSE:
 
  Copyright 2008-2009 Jérôme Bousquié
- Copyright 2009      Ivan R. Judson
+ Copyright 2009      Montana State University
 
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
