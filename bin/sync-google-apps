@@ -87,7 +87,6 @@ class State
 
    def exists?(entry)
       ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")
-      puts "Results from exist?: #{ts.inspect}"
       if ts.length > 0
          return true
       else
