@@ -438,11 +438,8 @@ if not $options.output_file.nil?
    $output << ["username", "first name", "last name", "password"]
 end
 
-# Create the Google Apps user and objects
-user = config["apps"]["user"]+"@"+config["apps"]["domain"]
-
 accounts.each do |entry|
-   #  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
+   puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
       if $output.nil?
          $queue.push(entry)
@@ -456,6 +453,9 @@ end
 if not $output.nil?
    exit
 end
+
+# Create the Google Apps user and objects
+user = config["apps"]["user"]+"@"+config["apps"]["domain"]
 
 # Create an array to store worker threads.
 workers = []
