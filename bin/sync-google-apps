@@ -100,9 +100,11 @@ class State
 
    def process_updates
       while @running or not @updates.empty?
-         entry,ts = @updates.pop
-         update(entry,ts)
-         Thread.pass
+        if @updates.length > 0
+          entry,ts = @updates.pop
+          update(entry,ts)
+        end
+        Thread.pass
       end
    end
 
