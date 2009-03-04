@@ -100,12 +100,14 @@ class State
 
    def process_updates
      @updater = Thread.new do
-        while @running or not @updates.empty?
+       puts "Creating process update thread." if $options.verbose
+        while @running || ! @updates.empty?
           if @updates.length > 0
             puts "Processing state update" if $options.verbose
             entry,ts = @updates.pop
             update(entry,ts)
           end
+          puts "Passing control out of process_updates."
           Thread.pass
         end
         Thread.exit
@@ -407,7 +409,7 @@ puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
 state_db = State.new(config["state"]["file"])
 state_db.reset if $options.reset
 
-# newer
+# Get the right timestamp to compare against for retrieving users from source data
 if $options.reset
   ts = Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
 else
