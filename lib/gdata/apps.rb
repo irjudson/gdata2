@@ -74,7 +74,7 @@ module GData #:nodoc:
         if response.code == "503"
           gdata_error = GDataError.new
           gdata_error.code = "503"
-          gdata_error.input = ""
+          gdata_error.input = "-"
           gdata_error.reason = "Apps API invoked too rapidly."
           msg = "error code : "+gdata_error.code+", invalid input : "+gdata_error.input+", reason : "+gdata_error.reason
           raise gdata_error, msg

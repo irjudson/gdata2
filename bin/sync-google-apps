@@ -161,7 +161,7 @@ def create_and_update_user(apps, entry)
     rescue Timeout::Error
       retry
     rescue GData::GDataError => e
-      puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+      puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
       if e.code == "503"
         result = nil
         sleep(backoff_factor)
@@ -185,7 +185,7 @@ def create_and_update_user(apps, entry)
     rescue Timeout::Error
       retry
     rescue GData::GDataError => e
-      puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+      puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
       if e.code == "503"
         result = nil
         sleep(backoff_factor)
@@ -208,7 +208,7 @@ def create_and_update_user(apps, entry)
       rescue Timeout::Error
         retry
       rescue GData::GDataError => e
-        puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+        puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
         if e.code == "503"
           result = nil
           sleep(backoff_factor)
