@@ -113,7 +113,9 @@ class State
     end
    end
 
-   def update(entry, ts=Time.now.gmtime.strftime("%Y%m%d%H%M00Z"))
+   def update(entry, ts=nil)
+      ts ||= Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
+    
       @mutex.synchronize {
          if exists?(entry)
             puts "Updating #{entry} with TS: #{ts}"
