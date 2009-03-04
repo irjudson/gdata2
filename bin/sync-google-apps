@@ -10,6 +10,7 @@ require 'optparse'
 require 'digest/sha1'
 require 'thread'
 require 'timeout'
+require 'faster_csv'
 
 require 'gdata'
 require 'gdata/apps'
@@ -46,13 +47,11 @@ class State
     
     @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
     @db.execute("CREATE TABLE updates (ts TEXT);")
-    @db.commit
   end
 
   def reset
     puts "Resetting state database." if @verbose
     @db.execute("DELETE FROM users;")
-    @db.commit
     @timestamp = "19700000000000Z"
     update_timestamp
   end
@@ -76,7 +75,6 @@ class State
 
     @db.execute("DELETE FROM updates;")
     @db.execute("INSERT INTO updates (ts) VALUES ('#{@timestamp}');")
-    @db.commit
   end
   
   def count_users
@@ -95,13 +93,14 @@ class State
   def update(entry)
     @mutex.synchronize {   
       @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
-      puts "Updating #{entry} with TS: #{@timestamp}"
       if exists?(entry)
+        puts "Updating #{entry} with TS: #{@timestamp}"
         @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
         @db.commit
       else
+        puts "Inserting #{entry} with TS: #{@timestamp}"
         @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
-        @db.commit
+        @db.commit        
       end
     }
   end
@@ -166,7 +165,7 @@ def create_and_update_user(apps, entry)
     rescue Timeout::Error
       retry
     rescue GData::GDataError => e
-      puts "  -->errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+      puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
       if e.code == "503"
         result = nil
         sleep(backoff_factor)
@@ -284,6 +283,7 @@ OptionParser.new do |opts|
   $options.debug = false
   $options.doit = true
   $options.threads = 1
+  $options.output_file = nil
   
   opts.banner = "Usage: sync-apps.rb [options]"
 
@@ -309,6 +309,10 @@ OptionParser.new do |opts|
   
   opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
     $options.threads = o.to_i
+  end
+  
+  opts.on("-o", "--output [FILE]", "File to write output to in csv format.") do |o|
+    $options.output_file = o.to_s
   end
   
   opts.on_tail("--version", "Show version") do
@@ -364,11 +368,25 @@ accounts = $source.search(:base => config["source"]["base"], :filter => filter, 
 puts "There are #{accounts.length} users in the source directory."
 puts "There are #{state_db.count_users} users in the state database."
 
+$output = nil
+if not $options.output_file.nil?
+  $output = FasterCSV.open($options.output_file, 'w')
+  $output << ["username", "first name", "last name", "password"]
+end
+
 accounts.each do |entry|
+  if not $output.nil?
+    $output << ["#{entry.montanaEduPersonID}", "#{entry.givenname}", "#{entry.sn}", "#{random_password}"]
+  else
 #  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
-  if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
-    $queue.push(entry)
+    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
+      $queue.push(entry)
+    end
   end
+end
+
+if not $output.nil?
+  exit
 end
 
 # Create an array to store worker threads.
