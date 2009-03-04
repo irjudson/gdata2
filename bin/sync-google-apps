@@ -87,6 +87,7 @@ class State
 
    def exists?(entry)
       ts = @db.execute("SELECT * FROM users WHERE 'idx=#{entry}';")
+      puts "Results from exist?: #{ts.inspect}"
       if ts.length > 0
          return false
       else
@@ -118,10 +119,10 @@ class State
     
       @mutex.synchronize {
          if exists?(entry)
-            puts "Updating #{entry} with TS: #{ts}"
+            puts "Updating #{entry} with TS: #{ts}" if $options.verbose
             @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE 'idx=#{entry}';")
          else
-            puts "Inserting #{entry} with TS: #{ts}"
+            puts "Inserting #{entry} with TS: #{ts}" if $options.verbose
             @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
          end
       }
