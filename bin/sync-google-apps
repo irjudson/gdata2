@@ -28,7 +28,7 @@ class State
       @updates = Queue.new
       @running = true
 
-      put "Creating state db updated thread" if $options.verbose
+      puts "Creating state db updated thread" if $options.verbose
       @updater = Thread.new(process_updates)
 
       if !File.exists?(fn)
