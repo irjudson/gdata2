@@ -26,6 +26,9 @@ class State
     @verbose = verbose
     @timestamp = timestamp
     @mutex = Mutex.new
+    @updates = Queue.new
+    @running = true
+    @updater = Thread.new(process_updates)
     
     if !File.exists?(fn)
       needs_initialization = 1
@@ -90,17 +93,26 @@ class State
     end
   end
   
-  def update(entry)
+  def push_update(entry)
+    @updates << { entry => Time.now.gmtime.strftime("%Y%m%d%H%M00Z") }
+  end
+
+  def process_updates
+    while @running
+      entry,ts = @updates.pop
+      update(entry,ts)
+      Thread.pass
+    end
+  end
+  
+  def update(entry, @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z"))
     @mutex.synchronize {   
-      @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
       if exists?(entry)
         puts "Updating #{entry} with TS: #{@timestamp}"
         @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
-        @db.commit
       else
         puts "Inserting #{entry} with TS: #{@timestamp}"
         @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
-        @db.commit        
       end
     }
   end
@@ -119,6 +131,10 @@ class State
       puts "Check -> Entry up to date, returning false" if $options.verbose
       return false
     end
+  end
+
+  def stop
+    @running = false
   end
 end
 
@@ -225,6 +241,33 @@ def create_and_update_user(apps, entry)
       end
     end
   end
+  
+  # if $options.forward
+  #   # Set the forward if we are doing that
+  #   backoff_factor = 2
+  #   result = nil
+  #   while result.nil?
+  #     begin
+  #       # Add the email address they're used to seeing
+  #       puts "Adding mailforward #{forward} to #{username}." if $options.verbose
+  #       result = mail.create_nickname(username, forward)
+  #     rescue Timeout::Error
+  #       retry
+  #     rescue GData::GDataError => e
+  #       puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+  #       if e.code == "503"
+  #         result = nil
+  #         sleep(backoff_factor)
+  #         backoff_factor *= backoff_factor
+  #       elsif e.code = "1300"
+  #         return true
+  #       else
+  #         return false        
+  #       end
+  #     end
+  #   end
+  # end
+  
   return true
 end
 
@@ -284,11 +327,14 @@ OptionParser.new do |opts|
   $options.doit = true
   $options.threads = 1
   $options.output_file = nil
+  $options.forward = false
+  $options.operator = ">="
   
   opts.banner = "Usage: sync-apps.rb [options]"
 
   opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
     $options.reset = true
+    $options.operator = "<="
   end
   
   opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
@@ -313,6 +359,10 @@ OptionParser.new do |opts|
   
   opts.on("-o", "--output [FILE]", "File to write output to in csv format.") do |o|
     $options.output_file = o.to_s
+  end
+
+  opts.on("-f", "--forwards", "Set forwarding addresses according to associations in configuration file.") do |o|
+    $options.forward = true
   end
   
   opts.on_tail("--version", "Show version") do
@@ -344,23 +394,16 @@ end
 
 # Create the Google Apps user and objects
 user = config["apps"]["user"]+"@"+config["apps"]["domain"]
-puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
+puts "Creating Apps Account Endpoint for #{user}." if $options.verbose && not $options.output_file.nil?
 
 # Create a local state store for keeping track of things between runs
 state_db = State.new(config["state"]["file"])
-if $options.reset
-  state_db.reset
-end
+state_db.reset if $options.reset
 
 # Pull attributes from the directory for users that have been modified since last run
 # Pull data from source
 attributes = config["attributes"].values
-if $options.reset 
-  oper = "<="
-else
-  oper = ">="
-end
-filter_string = "(&#{config['source']['filter']}(modifytimestamp#{oper}#{state_db.timestamp}))"
+filter_string = "(&#{config['source']['filter']}(modifytimestamp#{$options.operator}#{state_db.timestamp}))"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes) 
@@ -375,16 +418,17 @@ if not $options.output_file.nil?
 end
 
 accounts.each do |entry|
-  if not $output.nil?
-    $output << ["#{entry.montanaEduPersonID}", "#{entry.givenname}", "#{entry.sn}", "#{random_password}"]
-  else
 #  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
-    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
+  if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
+    if $output.nil?
       $queue.push(entry)
+    else
+      $output << ["#{entry.montanaEduPersonID}", "#{entry.givenname}", "#{entry.sn}", "#{random_password}"]
     end
   end
 end
 
+# If the goal is a csv file, don't bother calling google api
 if not $output.nil?
   exit
 end
@@ -393,18 +437,11 @@ end
 workers = []
 
 # Exit if an exception occurs in a thread.
-# Without this threads will fail silently and
-# we won't see any output.
 Thread.abort_on_exception = true  
 
-# Queue#empty? is unstable since it could change
-# between calling $queue.empty? and $queue.pop.
-# Popping an empty queue will cause the thread to block
-# and may cause a deadlock when the queue empties.
-# Instead we push on a terminal value at the end for each thread
-# in the worker pool.
+# Push on a terminal value for each thread
 $options.threads.times do |n|
-  $queue.push(:terminate) # Push on a terminal value
+  $queue.push(:terminate) 
 end
 
 $options.threads.times do |n|
@@ -418,13 +455,16 @@ $options.threads.times do |n|
       break if entry == :terminate
 
       if create_and_update_user(prov, entry)
-        state_db.update(entry.uniqueIdentifier)
+        state_db.push_update(entry.uniqueIdentifier)
+        Thread.pass
       end
     end
     
   end
 end
 
+# Wait for workers to finish
 workers.each { |w| w.join }
 
+# Update our local timestamp
 state_db.update_timestamp if not $options.reset
