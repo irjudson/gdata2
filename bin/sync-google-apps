@@ -46,11 +46,13 @@ class State
     
     @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
     @db.execute("CREATE TABLE updates (ts TEXT);")
+    @db.commit
   end
 
   def reset
     puts "Resetting state database." if @verbose
     @db.execute("DELETE FROM users;")
+    @db.commit
     @timestamp = "19700000000000Z"
     update_timestamp
   end
@@ -74,6 +76,7 @@ class State
 
     @db.execute("DELETE FROM updates;")
     @db.execute("INSERT INTO updates (ts) VALUES ('#{@timestamp}');")
+    @db.commit
   end
   
   def count_users
@@ -95,8 +98,10 @@ class State
       puts "Updating #{entry} with TS: #{@timestamp}"
       if exists?(entry)
         @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
+        @db.commit
       else
         @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
+        @db.commit
       end
     }
   end
@@ -161,7 +166,7 @@ def create_and_update_user(apps, entry)
     rescue Timeout::Error
       retry
     rescue GData::GDataError => e
-      puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+      puts "  -->errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
       if e.code == "503"
         result = nil
         sleep(backoff_factor)
