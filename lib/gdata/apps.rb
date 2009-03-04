@@ -2,6 +2,8 @@ $:.unshift(File.expand_path(File.dirname(__FILE__))) unless
 $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
 require 'cgi'
+require 'gdata/apps/provisioning'
+require 'gdata/apps/email'
 
 module GData #:nodoc:
    class GApps
@@ -10,7 +12,8 @@ module GData #:nodoc:
 
       # authentication token, valid up to 24 hours after the last connection
       attr_reader :token, :domain
-
+      attr_reader :provision, :mail
+      
       # Creates a new Apps object
       #
       #       user : Google Apps domain administrator username (string)
@@ -37,6 +40,8 @@ module GData #:nodoc:
          @connection = Connection.new(@@google_host, @@google_port, proxy, proxy_port, proxy_user, proxy_passwd)
          @token = login(user, passwd)
          @headers = {'Content-Type'=>'application/atom+xml', 'Authorization'=> 'GoogleLogin auth='+token}
+         @provision = GData::Apps::Provisioning.new(self)
+         @mail = GData::Apps::Email.new(self)
          return @connection
       end
 

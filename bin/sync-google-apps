@@ -14,8 +14,6 @@ require 'faster_csv'
 
 require 'gdata'
 require 'gdata/apps'
-require 'gdata/apps/provisioning'
-require 'gdata/apps/email'
 
 $options = OpenStruct.new
 $source = nil
@@ -175,8 +173,8 @@ end
 def create_and_update_user(apps, entry)
    uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
    username = uid_dn
-   first = entry['givenname']
-   last = entry['sn']
+   first = entry.givenname
+   last = entry.sn
    password = random_password
    nickname = uid_alias
 
@@ -187,7 +185,8 @@ def create_and_update_user(apps, entry)
       begin
          # create user
          puts "Creating user #{username}." if $options.verbose
-         result = apps.create_user(username, first, last, password)
+         #result = apps.provision.create_user(username, first, last, password)
+         result = 1
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
@@ -211,7 +210,8 @@ def create_and_update_user(apps, entry)
       begin
          # update so they don't have to change their password at next login
          puts "Setting password reset to false for #{username}." if $options.verbose
-         result = apps.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
+         #result = apps.provision.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
+         result = 1
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
@@ -234,7 +234,8 @@ def create_and_update_user(apps, entry)
          begin
             # Add the email address they're used to seeing
             puts "Adding alias #{nickname} to #{username}." if $options.verbose
-            result = apps.create_nickname(username, nickname)
+            #result = apps.provision.create_nickname(username, nickname)
+            result = 1
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
@@ -252,31 +253,38 @@ def create_and_update_user(apps, entry)
       end
    end
 
-   # if $options.forward
-   #   # Set the forward if we are doing that
-   #   backoff_factor = 2
-   #   result = nil
-   #   while result.nil?
-   #     begin
-   #       # Add the email address they're used to seeing
-   #       puts "Adding mailforward #{forward} to #{username}." if $options.verbose
-   #       result = mail.create_nickname(username, forward)
-   #     rescue Timeout::Error
-   #       retry
-   #     rescue GData::GDataError => e
-   #       puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
-   #       if e.code == "503"
-   #         result = nil
-   #         sleep(backoff_factor)
-   #         backoff_factor *= backoff_factor
-   #       elsif e.code = "1300"
-   #         return true
-   #       else
-   #         return false
-   #       end
-   #     end
-   #   end
-   # end
+   if $options.forward
+     address_list = config['forwards']
+     entry.montanaEduPersonClassicRoles.each do |role|
+       domain = address_list[role[0..2]]
+       forward = "#{nickname}@#{domain}"
+       
+       # Set the forward if we are doing that
+       backoff_factor = 2
+       result = nil
+       while result.nil?
+         begin
+           # Add the email address they're used to seeing
+           puts "Adding mailforward #{forward} to #{username}."
+           #result = apps.mail.update_forward(username, forward)
+           result = 1
+         rescue Timeout::Error
+           retry
+         rescue GData::GDataError => e
+           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+           if e.code == "503"
+             result = nil
+             sleep(backoff_factor)
+             backoff_factor *= backoff_factor
+           elsif e.code = "1300"
+             return true
+           else
+             return false
+           end
+         end
+       end
+     end
+   end
 
    return true
 end
@@ -464,14 +472,12 @@ $options.threads.times do |n|
    workers << Thread.new do
       puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
       apps = GData::GApps.new(user, config["apps"]["password"])
-      prov = GData::Apps::Provisioning.new(apps)
-      mail = GData::Apps::Email.new(apps)
 
       loop do
          entry = $queue.pop
          break if entry == :terminate
 
-         if create_and_update_user(prov, entry)
+         if create_and_update_user(apps, entry)
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
