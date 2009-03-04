@@ -170,7 +170,7 @@ def parse_uids(uid_array, dn)
    return uid_dn, uid_alias
 end
 
-def create_and_update_user(apps, entry)
+def create_and_update_user(apps, entry, config)
    uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
    username = uid_dn
    first = entry.givenname
@@ -477,7 +477,7 @@ $options.threads.times do |n|
          entry = $queue.pop
          break if entry == :terminate
 
-         if create_and_update_user(apps, entry)
+         if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
