@@ -22,19 +22,20 @@ $source = nil
 $queue = Queue.new
 
 class State
-  def initialize(fn, timestamp="19700000000000Z", verbose=false)
-    @verbose = verbose
+  def initialize(fn, timestamp="19700000000000Z")
     @timestamp = timestamp
     @mutex = Mutex.new
     @updates = Queue.new
     @running = true
+    
+    put "Creating state db updated thread" if $options.verbose
     @updater = Thread.new(process_updates)
     
     if !File.exists?(fn)
       needs_initialization = 1
     end
     
-    puts "Creating new state database." if @verbose
+    puts "Creating new state database." if $options.verbose
     
     @db = SQLite3::Database.new(fn)
     
@@ -46,14 +47,14 @@ class State
   end
   
   def do_initialization
-    puts "Initializing state database." if @verbose
+    puts "Initializing state database." if $options.verbose
     
     @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
     @db.execute("CREATE TABLE updates (ts TEXT);")
   end
 
   def reset
-    puts "Resetting state database." if @verbose
+    puts "Resetting state database." if $options.verbose
     @db.execute("DELETE FROM users;")
     @timestamp = "19700000000000Z"
     update_timestamp
@@ -98,8 +99,7 @@ class State
   end
 
   def process_updates
-    while @running
-      if not @updates.empty?
+    while @running or not @updates.empty?
         entry,ts = @updates.pop
         update(entry,ts)
       end
@@ -464,6 +464,10 @@ $options.threads.times do |n|
     
   end
 end
+
+# Stop the state_db from updating itself
+if state_db.stop
+  puts "Stopped state updates"
 
 # Wait for workers to finish
 workers.each { |w| w.join }
