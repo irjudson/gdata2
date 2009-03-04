@@ -107,9 +107,8 @@ class State
             entry,ts = @updates.pop
             update(entry,ts)
           end
-          puts "Passing control out of process_updates."
-          Thread.pass
         end
+        puts "Exiting process update thread." if $options.verbose
         Thread.exit
     end
    end
@@ -472,7 +471,6 @@ $options.threads.times do |n|
 
          if create_and_update_user(prov, entry)
             state_db.push_update(entry.uniqueIdentifier)
-            Thread.pass
          end
       end
 
