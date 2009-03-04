@@ -85,7 +85,7 @@ module GData #:nodoc:
             msg.about_name(family_name, given_name)
             msg.about_quota(quota.to_s) if quota
             response  = @apps.request(:user_create,nil, msg.to_s)
-            user_entry = UserEntry.new(response.elements["entry"])
+            #user_entry = UserEntry.new(response.elements["entry"])
          end
 
 
@@ -147,7 +147,7 @@ module GData #:nodoc:
             msg.about_name(family_name, given_name)
             msg.about_quota(quota) if quota
             response  = @apps.request(:user_update,username, msg.to_s)
-            user_entry = UserEntry.new(response.elements["entry"])
+            #user_entry = UserEntry.new(response.elements["entry"])
          end
 
          # Deletes an account in your domain
@@ -168,7 +168,7 @@ module GData #:nodoc:
             msg.about_login(username)
             msg.about_nickname(nickname)
             response  = @apps.request(:nickname_create,nil, msg.to_s)
-            nickname_entry = NicknameEntry.new(response.elements["entry"])
+            #nickname_entry = NicknameEntry.new(response.elements["entry"])
          end
 
          # Returns a NicknameEntry instance from a nickname
