@@ -10,7 +10,8 @@ module GData #:nodoc:
       #
       #       adminuser = "root@mydomain.com"
       #       password  = "PaSsWo4d!"
-      #       myapps = ProvisioningApi.new(adminuser,password)
+      #       gapp = GApps.new('root@mydomain.com','PaSsWoRd')
+      #       myapps = Provisioning.new(gapp)
       #       (see examples in  ProvisioningApi.new documentation for handling proxies)
       #
       #       new_user = myapps.create_user("jsmith", "john", "smith", "secret", nil, "2048")
@@ -36,10 +37,10 @@ module GData #:nodoc:
       #               puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason
       #       end
       #
-      # Email lists ?
+      # Group ?
       #
-      #       new_list = myapps.create_email_list("sale-dep")
-      #       new_address = myapps.add_address_to_email_list("sale-dep", "bibi@ruby-forge.org")
+      #       new_list = myapps.create_group("sale-dep")
+      #       new_address = myapps.add_to_group("sale-dep", "bibi@ruby-forge.org")
       #
 
       class Provisioning
@@ -66,6 +67,27 @@ module GData #:nodoc:
            @apps = apps
            setup_actions()
          end
+
+         # Creates an account in your domain, returns a UserEntry instance
+         #       params :
+         #                       username, given_name, family_name and password are required
+         #                       passwd_hash_function (optional) : nil (default) or "SHA-1"
+         #                       quota (optional) : nil (default) or integer for limit in MB
+         #       ex :
+         #                       gapp = GApps.new('root@mydomain.com','PaSsWoRd')
+         #                       myapps = ProvisioningApi.new(gapp)
+         #                       user = myapps.create('jsmith', 'John', 'Smith', 'p455wD')
+         #
+         # By default, a new user must change his password at first login. Please use update_user if you want to change this just after the creation.
+         def create_user(username, given_name, family_name, password, passwd_hash_function=nil, quota=nil)
+            msg = ProvisioningMessage.new
+            msg.about_login(username,password,passwd_hash_function,"false","false", "true")
+            msg.about_name(family_name, given_name)
+            msg.about_quota(quota.to_s) if quota
+            response  = @apps.request(:user_create,nil, msg.to_s)
+            user_entry = UserEntry.new(response.elements["entry"])
+         end
+
 
          # Returns a UserEntry instance from a username
          #       ex :
@@ -104,26 +126,6 @@ module GData #:nodoc:
             user_feed = Feed.new(response.elements["feed"],  UserEntry)
          end
 
-         # Creates an account in your domain, returns a UserEntry instance
-         #       params :
-         #                       username, given_name, family_name and password are required
-         #                       passwd_hash_function (optional) : nil (default) or "SHA-1"
-         #                       quota (optional) : nil (default) or integer for limit in MB
-         #       ex :
-         #                       gapp = GApps.new('root@mydomain.com','PaSsWoRd')
-         #                       myapps = ProvisioningApi.new(gapp)
-         #                       user = myapps.create('jsmith', 'John', 'Smith', 'p455wD')
-         #
-         # By default, a new user must change his password at first login. Please use update_user if you want to change this just after the creation.
-         def create_user(username, given_name, family_name, password, passwd_hash_function=nil, quota=nil)
-            msg = ProvisioningMessage.new
-            msg.about_login(username,password,passwd_hash_function,"false","false", "true")
-            msg.about_name(family_name, given_name)
-            msg.about_quota(quota.to_s) if quota
-            response  = @apps.request(:user_create,nil, msg.to_s)
-            user_entry = UserEntry.new(response.elements["entry"])
-         end
-
          # Updates an account in your domain, returns a UserEntry instance
          #       params :
          #                       username is required and can't be updated.
@@ -144,7 +146,6 @@ module GData #:nodoc:
             msg.about_login(username,password,passwd_hash_function,admin,suspended, changepasswd)
             msg.about_name(family_name, given_name)
             msg.about_quota(quota) if quota
-            msg.add_path('https://'+@@google_host+@action[:user_update][:path]+username)
             response  = @apps.request(:user_update,username, msg.to_s)
             user_entry = UserEntry.new(response.elements["entry"])
          end
@@ -156,6 +157,18 @@ module GData #:nodoc:
          #                       myapps.delete('jsmith')
          def delete_user(username)
             response  = @apps.request(:user_delete,username)
+         end
+
+         # Creates a nickname for the username in your domain and returns a NicknameEntry instance
+         #               gapp = GApps.new('root@mydomain.com','PaSsWoRd')
+         #               myapps = ProvisioningApi.new(gapp)
+         #               mynewnick = myapps.create_nickname('jsmith', 'john.smith')
+         def create_nickname(username, nickname)
+            msg = ProvisioningMessage.new
+            msg.about_login(username)
+            msg.about_nickname(nickname)
+            response  = @apps.request(:nickname_create,nil, msg.to_s)
+            nickname_entry = NicknameEntry.new(response.elements["entry"])
          end
 
          # Returns a NicknameEntry instance from a nickname
@@ -192,18 +205,6 @@ module GData #:nodoc:
             nicknames_feed = add_next_feeds(nicknames_feed, xml_response, NicknameEntry)
          end
 
-         # Creates a nickname for the username in your domain and returns a NicknameEntry instance
-         #               gapp = GApps.new('root@mydomain.com','PaSsWoRd')
-         #               myapps = ProvisioningApi.new(gapp)
-         #               mynewnick = myapps.create_nickname('jsmith', 'john.smith')
-         def create_nickname(username,nickname)
-            msg = ProvisioningMessage.new
-            msg.about_login(username)
-            msg.about_nickname(nickname)
-            response  = @apps.request(:nickname_create,nil, msg.to_s)
-            nickname_entry = NicknameEntry.new(response.elements["entry"])
-         end
-
          # Deletes the nickname  in your domain
          #               gapp = GApps.new('root@mydomain.com','PaSsWoRd')
          #               myapps = ProvisioningApi.new(gapp)
@@ -224,22 +225,45 @@ module GData #:nodoc:
             nicknames_feed = Feed.new(xml_response.elements["feed"],  NicknameEntry)
          end
 
-         # Aliases
-         alias createUser create_user
-         alias retrieveUser retrieve_user
-         alias retrieveAllUsers retrieve_all_users
-         alias retrievePageOfUsers retrieve_page_of_users
-         alias updateUser update_user
-         alias deleteUser delete_user
-         alias createNickname create_nickname
-         alias retrieveNickname retrieve_nickname
-         alias retrieveNicknames retrieve_nicknames
-         alias retrieveAllNicknames retrieve_all_nicknames
-         alias retrievePageOfNicknames retrieve_page_of_nicknames
-         alias deleteNickname delete_nickname
-         # Group CRUD
-         # Group Membership
-         # Group Ownership
+         def create_group
+           raise NotImplementedError
+         end
+         
+         def update_group
+           raise NotImplementedError
+         end
+         
+         def retrieve_group
+           raise NotImplementedError
+         end
+         
+         def delete_group
+           raise NotImplementedError
+         end
+         
+         def add_member_to_group
+           raise NotImplementedError
+         end
+         
+         def retrieve_members_of_group
+           raise NotImplementedError
+         end
+         
+         def remove_member_from_group
+           raise NotImplementedError
+         end
+         
+         def add_owner_to_group
+           raise NotImplementedError
+         end
+         
+         def retrieve_owner_of_group
+           raise NotImplementedError
+         end
+         
+         def remove_owner_from_group
+           raise NotImplementedError
+         end
          
          # private methods
          private #:nodoc:
@@ -250,7 +274,8 @@ module GData #:nodoc:
             path_user = '/a/feeds/'+domain+'/user/2.0'
             path_nickname = '/a/feeds/'+domain+'/nickname/2.0'
             path_email_list = '/a/feeds/'+domain+'/emailList/2.0'
-
+            path_group = '/a/feeds/group/2.0/'+domain
+            
             @apps.register_action(:domain_login, {:method => 'POST', :path => '/accounts/ClientLogin' })
             @apps.register_action(:user_create, { :method => 'POST', :path => path_user })
             @apps.register_action(:user_retrieve, { :method => 'GET', :path => path_user+'/' })
@@ -262,6 +287,10 @@ module GData #:nodoc:
             @apps.register_action(:nickname_retrieve_all_for_user, { :method => 'GET', :path =>path_nickname+'?username=' })
             @apps.register_action(:nickname_retrieve_all_in_domain, { :method => 'GET', :path =>path_nickname })
             @apps.register_action(:nickname_delete, { :method => 'DELETE', :path =>path_nickname+'/' })
+            @apps.register_action(:group_create, { :method => 'POST', :path => path_group })
+            @apps.register_action(:group_update, { :method => 'PUT', :path => path_group })
+            @apps.register_action(:group_retrieve, { :method => 'GET', :path => path_group })
+            @apps.register_action(:group_delete, { :method => 'DELETE', :path => path_group })
             
             # special action "next" for linked feed results. :path will be affected with URL received in a link tag.
             @apps.register_action(:next,  {:method => 'GET', :path =>nil })
@@ -330,36 +359,6 @@ module GData #:nodoc:
          end
       end
 
-      # EmailListEntry object.
-      #
-      # Handles API responses relative to an email list.
-      #
-      # Attributes :
-      #       email_list : string . The email list name is written without "@" and everything following.
-      class EmailListEntry
-         attr_reader :email_list
-
-         # EmailListEntry constructor. Needs a REXML::Element <entry> as parameter
-         def initialize(entry) #:nodoc:
-            @email_list = entry.elements["apps:emailList"].attributes["name"]
-         end
-      end
-
-      # EmailListRecipientEntry object.
-      #
-      # Handles API responses relative to a recipient.
-      #
-      # Attributes :
-      #       email : string
-      class EmailListRecipientEntry
-         attr_reader :email
-
-         # EmailListEntry constructor. Needs a REXML::Element <entry> as parameter
-         def initialize(entry) #:nodoc:
-            @email = entry.elements["gd:who"].attributes["email"]
-         end
-      end
-
       # UserFeed object : Array populated with Element_class objects (UserEntry, NicknameEntry, EmailListEntry or EmailListRecipientEntry)
       class Feed < Array #:nodoc:
 
@@ -374,6 +373,7 @@ module GData #:nodoc:
       class ProvisioningMessage < GData::RequestMessage #:nodoc:
         def initialize
           super
+          self.elements["atom:entry"].add_element "atom:category", {"scheme" => "http://schemas.google.com/g/2005#kind"}
         end
 
         # adds <apps:login> element in the message body.
@@ -408,12 +408,6 @@ module GData #:nodoc:
         def about_nickname(name)
            self.elements["atom:entry/atom:category"].add_attribute("term", "http://schemas.google.com/apps/2006#nickname")
            self.elements["atom:entry"].add_element "apps:nickname", {"name" => name}
-           return self
-        end
-
-        # adds <gd:who> in the message body.
-        def about_who(email)
-           self.elements["atom:entry"].add_element "gd:who", {"email" => email }
            return self
         end
       end

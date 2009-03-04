@@ -1,2 +1,4 @@
 *.yml
 bin/checkaccounts.rb
+*.sqlite
+*.out

@@ -36,6 +36,7 @@ Rake::RDocTask.new do |rdoc|
     rdoc.options = RDOC_OPTS
     rdoc.main = "README.txt"
     rdoc.rdoc_files.add [
+      'LICENSE.txt',
       'README.txt',
       'History.txt',
       'lib/**/*.rb'

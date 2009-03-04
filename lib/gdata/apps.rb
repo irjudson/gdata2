@@ -1,6 +1,8 @@
 $:.unshift(File.expand_path(File.dirname(__FILE__))) unless
 $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
+require 'cgi'
+
 module GData #:nodoc:
    class GApps
       @@google_host = 'apps-apis.google.com'
@@ -63,26 +65,33 @@ module GData #:nodoc:
          value = '' if !value
          path = @actions[action][:path]+value
          response = @connection.perform(method, path, message, headers)
-         puts "Method: #{method}"
-         puts "Path: #{path}"
-         puts "Headers: #{headers}"
-         puts "Message: #{message}"
-         response_xml = Document.new(response.body)
-         test_errors(response_xml)
+         response_xml = parse_response(response)
          return response_xml
       end
 
       # parses xml response for an API error tag. If an error, constructs and raises a GDataError.
-      def test_errors(xml)
-         error = xml.elements["AppsForYourDomainErrors/error"]
-         if  error
-            gdata_error = GDataError.new
-            gdata_error.code = error.attributes["errorCode"]
-            gdata_error.input = error.attributes["invalidInput"]
-            gdata_error.reason = error.attributes["reason"]
-            msg = "error code : "+gdata_error.code+", invalid input : "+gdata_error.input+", reason : "+gdata_error.reason
-            raise gdata_error, msg
-         end
+      def parse_response(response)
+        if response.code == "503"
+          gdata_error = GDataError.new
+          gdata_error.code = "503"
+          gdata_error.input = nil
+          gdata_error.reason = "Apps API invoked too rapidly."
+          msg = "error code : "+gdata_error.code+", invalid input : "+gdata_error.input+", reason : "+gdata_error.reason
+          raise gdata_error, msg
+        end          
+        
+        xml = Document.new(response.body)
+
+        error = xml.elements["AppsForYourDomainErrors/error"]
+        if error
+          gdata_error = GDataError.new
+          gdata_error.code = error.attributes["errorCode"]
+          gdata_error.input = error.attributes["invalidInput"]
+          gdata_error.reason = error.attributes["reason"]
+          msg = "error code : "+gdata_error.code+", invalid input : "+gdata_error.input+", reason : "+gdata_error.reason
+          raise gdata_error, msg
+        end
+        return xml
       end
    end
 end

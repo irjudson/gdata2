@@ -1,75 +1,310 @@
 #!/usr/bin/env ruby
+#
+#
+$: << '../lib'
 
 require 'rubygems'
 require 'sqlite3'
 require 'net/ldap'
 require 'optparse'
+require 'digest/sha1'
+require 'thread'
+
+require 'gdata'
+require 'gdata/apps'
+require 'gdata/apps/provisioning'
+require 'gdata/apps/email'
 
 $options = OpenStruct.new
 $source = nil
+$queue = Queue.new
 
 class State
-  def initialize(fn, verbose=false)
+  def initialize(fn, timestamp="19700000000000Z", verbose=false)
     @verbose = verbose
+    @timestamp = timestamp
     
     if !File.exists?(fn)
       needs_initialization = 1
     end
     
-    if @verbose
-      puts "Creating new state database."
-    end
+    puts "Creating new state database." if @verbose
     
     @db = SQLite3::Database.new(fn)
     
     if needs_initialization
       do_initialization
+    else
+      update_timestamp
     end
   end
   
   def do_initialization
-    if @verbose
-      puts "Initializing state database."
-    end
+    puts "Initializing state database." if @verbose
     
     @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
+    @db.execute("CREATE TABLE updates (ts TEXT);")
   end
 
-  def reset_stat
-    if @verbose
-      puts "Resetting state database."
-    end
-    
-    @db.execute("DELETE * FROM users;")
+  def reset
+    puts "Resetting state database." if @verbose
+    @db.execute("DELETE FROM users;")
+    @timestamp = "19700000000000Z"
+    update_timestamp
   end
   
   def show_users
+    ts = @db.execute("SELECT * FROM updates;")[0]
+    puts "Last touched: #{ts}"
+    
     puts "Dumping users:"
-
     @db.execute("SELECT * FROM users;") do |user|
-      puts user
+      puts user.join(", ")
     end
+  end
+  
+  def timestamp
+    return @timestamp
+  end
+  
+  def update_timestamp
+    @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
 
+    @db.execute("DELETE FROM updates;")
+    @db.execute("INSERT INTO updates (ts) VALUES ('#{@timestamp}');")
+  end
+  
+  def count_users
+    @db.execute("SELECT count(*) FROM users;")
+  end
+
+  def exists?(entry)
+    ts = @db.execute("SELECT * FROM users WHERE 'idx=#{entry}';")
+    if ts.length > 0
+      return false
+    else 
+      return true
+    end
+  end
+  
+  def update(entry)
+    @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
+
+    if exists?(entry)
+      @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
+    else
+      @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
+    end
+  end
+  
+  def check(entry, source_stamp)
+    source = Time.parse(source_stamp[0])
+    ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")[0]
+    if ts.nil?
+      return true
+    end
+    last_modified = Time.parse(ts)
+    if ts < source
+      puts "Check -> Entry old, returning true" if $options.verbose
+      return true
+    else
+      puts "Check -> Entry up to date, returning false" if $options.verbose
+      return false
+    end
   end
 end
 
+def random_password(size = 12)
+  chars = (('a'..'z').to_a + ('0'..'9').to_a) - %w(i o 0 1 l 0)
+  password = (1..size).collect{|a| chars[rand(chars.size)] }.join
+#  sha1 = Digest::SHA1.hexdigest(password)
+  return password
+end
+
+def parse_uids(uid_array, dn)
+  uid_dn = dn.split(',')[0].split('=')[1]
+  uid_alias = nil
+  uid_array.each do |uid|
+    if uid.match(uid_dn)
+      uid_dn = uid
+    else
+      uid_alias = uid
+    end
+  end
+  
+  if uid_alias.nil?
+    uid_alias = uid_dn
+  end
+  return uid_dn, uid_alias
+end
+
+def create_and_update_user(apps, entry)
+  uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
+  username = uid_dn
+  first = entry['givenname']
+  last = entry['sn']
+  password = random_password
+  nickname = uid_alias
+  
+  # First create them
+  backoff_factor = 2
+  result = nil
+  while result.nil?
+    begin
+      # create user
+      puts "Creating user #{username}." if $options.verbose
+      result = apps.create_user(username, first, last, password)
+    rescue GData::GDataError => e
+      #puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+      if e.code == "503"
+        result = nil
+        sleep(backoff_factor)
+        backoff_factor *= backoff_factor
+      elsif e.code = "1300"
+        return true
+      else
+        return false
+      end
+    end
+  end
+
+  # Then set the password reset to false so they don't have to change it at next login
+  backoff_factor = 2
+  result = nil
+  while result.nil?
+    begin
+      # update so they don't have to change their password at next login
+      puts "Setting password reset to false for #{username}." if $options.verbose
+      result = apps.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
+    rescue GData::GDataError => e
+      #puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+      if e.code == "503"
+        result = nil
+        sleep(backoff_factor)
+        backoff_factor *= backoff_factor
+      else
+        return false
+      end
+    end
+  end
+
+  if uid_dn != uid_alias
+    # Finally add the email address they know about
+    backoff_factor = 2
+    result = nil
+    while result.nil?
+      begin
+        # Add the email address they're used to seeing
+        puts "Adding alias #{nickname} to #{username}." if $options.verbose
+        result = apps.create_nickname(username, nickname)
+      rescue GData::GDataError => e
+        #puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+        if e.code == "503"
+          result = nil
+          sleep(backoff_factor)
+          backoff_factor *= backoff_factor
+        elsif e.code = "1300"
+          return true
+        else
+          return false        
+        end
+      end
+    end
+  end
+  return true
+end
+
+def print_user(entry, config)
+  puts "DN: #{entry.dn}"
+  #
+  # Each entry has the following attributes (from the config file)
+  #
+  # UniqueID: uniqueIdentifier
+  # GoogleUsername: montanaEduPersonID
+  # GoogleFirstName: givenName
+  # GoogleLastName: sn
+  # Nickname: uid
+  # Affiliation: montanaEduPersonClassicRoles
+  #
+  uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
+  
+  print "  Message to Create account:\n"
+  print "    Username: #{uid_dn}\n"
+  print "    First Name: #{entry.givenname}\n"
+  print "    Last Name: #{entry.sn}\n"
+  print "    Uid: #{entry.uid.join(", ")}\n"
+  print "    UUID: #{entry.uniqueIdentifier}\n"
+  print "    Portal Email: #{uid_alias}@myportal.montana.edu\n"
+  
+  if entry.attribute_names.include?("montanaedupersonclassicroles")
+    print "    Campus Email Addresses:\n"
+    entry['montanaedupersonclassicroles'].each do |role|
+      if role.match(/^bz/)
+        print "      Bozeman Email: #{uid_alias}@msu.montana.edu\n"
+      elsif role.match(/^bl/)
+        print "      Billings Email: #{uid_alias}@students.msubillings.edu\n"
+      elsif role.match(/^gf/)
+        print "      Great Falls Email: #{uid_alias}@students.msugf.edu\n"
+      elsif role.match(/^hv/)
+        print "      Havre/Northern Email: #{uid_alias}@students.msun.edu\n"
+      end
+    end
+  end
+  
+  if config["apps"].has_key?("maildomain")
+    md = config["apps"]["maildomain"]
+    print "    Campus Email Address: #{uid_alias}@#{md}\n"
+  end
+end
+
+#
+# Main Program
+#
+
+# Parse commandline options
 OptionParser.new do |opts|
   $options.verbose = false
   $options.config = 'config.yml'
-
+  $options.reset = false
+  $options.debug = false
+  $options.doit = true
+  $options.threads = 1
+  
   opts.banner = "Usage: sync-apps.rb [options]"
 
+  opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
+    $options.reset = true
+  end
+  
   opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
     $options.config = o.to_s
   end
 
+  opts.on("-v", "--verbose", "Operate verbosely.") do |o|
+    $options.verbose = true
+  end
+
+  opts.on("-d", "--debug", "Operate with debug output.") do |o|
+    $options.debug = true
+  end
+
+  opts.on("-n", "--not-really", "Don't really perform the operations, just pretend.") do |o|
+    $options.doit = false
+  end
+  
+  opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
+    $options.threads = o.to_i
+  end
+  
   opts.on_tail("--version", "Show version") do
     puts OptionParser::Version.join('.')
   end
 end.parse!
 
+# Load configuration file
 config = YAML.load_file($options.config)
 
+# Create a source object to pull data from
 if config["source"]["type"] == "ldap"
   args = {
     :host => config["source"]["host"],
@@ -86,17 +321,78 @@ if config["source"]["type"] == "ldap"
   end
 
   $source = Net::LDAP.new args
+end
 
-  attributes = config["attributes"].values
-  filter = Net::LDAP::Filter.construct(config["source"]["filter"])
-  $source.search(:base => config["source"]["base"],
-               :filter => filter, :attributes => attributes) do |entry|
-    puts "DN: #{entry.dn}"
-    entry.each do |attr,val|
-      puts "  #{attr} => #{val}"
-    end
+# Create the Google Apps user and objects
+user = config["apps"]["user"]+"@"+config["apps"]["domain"]
+puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
+apps = GData::GApps.new(user, config["apps"]["password"])
+prov = GData::Apps::Provisioning.new(apps)
+mail = GData::Apps::Email.new(apps)
+
+# Create a local state store for keeping track of things between runs
+state_db = State.new(config["state"]["file"])
+if $options.reset
+  state_db.reset
+end
+
+# Pull attributes from the directory for users that have been modified since last run
+# Pull data from source
+attributes = config["attributes"].values
+if $options.reset 
+  oper = "<="
+else
+  oper = ">="
+end
+filter_string = "(&#{config['source']['filter']}(modifytimestamp#{oper}#{state_db.timestamp}))"
+puts "Filter String: #{filter_string}" if $options.debug
+filter = Net::LDAP::Filter.construct(filter_string)
+accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes) 
+
+puts "There are #{accounts.length} users in the source directory."
+puts "There are #{state_db.count_users} users in the state database."
+
+exit
+
+accounts.each do |entry|
+  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
+  if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
+    $queue.push(entry)
   end
 end
 
-user = config["apps"]["user"]+"@"+config["apps"]["domain"]
-state_db = State.new(config["state"]["file"])
+# Create an array to store worker threads.
+workers = []
+
+# Exit if an exception occurs in a thread.
+# Without this threads will fail silently and
+# we won't see any output.
+Thread.abort_on_exception = true  
+
+# Queue#empty? is unstable since it could change
+# between calling $queue.empty? and $queue.pop.
+# Popping an empty queue will cause the thread to block
+# and may cause a deadlock when the queue empties.
+# Instead we push on a terminal value at the end for each thread
+# in the worker pool.
+$options.threads.times do |n|
+  $queue.push(:terminate) # Push on a terminal value
+end
+
+$options.threads.times do |n|
+  workers << Thread.new do    
+    loop do
+      entry = $queue.pop
+      break if entry == :terminate
+
+      if create_and_update_user(prov, entry)
+        state_db.update(entry.uniqueIdentifier)
+      end
+    end
+    
+  end
+end
+
+workers.each { |w| w.join }
+
+state_db.update_timestamp if not $options.reset
