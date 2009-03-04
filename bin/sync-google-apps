@@ -155,7 +155,7 @@ def create_and_update_user(apps, entry)
       puts "Creating user #{username}." if $options.verbose
       result = apps.create_user(username, first, last, password)
     rescue GData::GDataError => e
-      #puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+      puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
       if e.code == "503"
         result = nil
         sleep(backoff_factor)
@@ -177,7 +177,7 @@ def create_and_update_user(apps, entry)
       puts "Setting password reset to false for #{username}." if $options.verbose
       result = apps.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
     rescue GData::GDataError => e
-      #puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+      puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
       if e.code == "503"
         result = nil
         sleep(backoff_factor)
@@ -198,7 +198,7 @@ def create_and_update_user(apps, entry)
         puts "Adding alias #{nickname} to #{username}." if $options.verbose
         result = apps.create_nickname(username, nickname)
       rescue GData::GDataError => e
-        #puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
+        puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
         if e.code == "503"
           result = nil
           sleep(backoff_factor)
@@ -326,9 +326,6 @@ end
 # Create the Google Apps user and objects
 user = config["apps"]["user"]+"@"+config["apps"]["domain"]
 puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
-apps = GData::GApps.new(user, config["apps"]["password"])
-prov = GData::Apps::Provisioning.new(apps)
-mail = GData::Apps::Email.new(apps)
 
 # Create a local state store for keeping track of things between runs
 state_db = State.new(config["state"]["file"])
@@ -352,10 +349,8 @@ accounts = $source.search(:base => config["source"]["base"], :filter => filter, 
 puts "There are #{accounts.length} users in the source directory."
 puts "There are #{state_db.count_users} users in the state database."
 
-exit
-
 accounts.each do |entry|
-  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
+#  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
   if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
     $queue.push(entry)
   end
@@ -381,6 +376,10 @@ end
 
 $options.threads.times do |n|
   workers << Thread.new do    
+    apps = GData::GApps.new(user, config["apps"]["password"])
+    prov = GData::Apps::Provisioning.new(apps)
+    mail = GData::Apps::Email.new(apps)
+
     loop do
       entry = $queue.pop
       break if entry == :terminate
