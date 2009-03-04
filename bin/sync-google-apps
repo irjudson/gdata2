@@ -394,7 +394,7 @@ end
 
 # Create the Google Apps user and objects
 user = config["apps"]["user"]+"@"+config["apps"]["domain"]
-puts "Creating Apps Account Endpoint for #{user}." if $options.verbose && not $options.output_file.nil?
+puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
 
 # Create a local state store for keeping track of things between runs
 state_db = State.new(config["state"]["file"])
