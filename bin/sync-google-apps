@@ -402,10 +402,6 @@ if config["source"]["type"] == "ldap"
    $source = Net::LDAP.new args
 end
 
-# Create the Google Apps user and objects
-user = config["apps"]["user"]+"@"+config["apps"]["domain"]
-puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
-
 # Create a local state store for keeping track of things between runs
 state_db = State.new(config["state"]["file"])
 state_db.reset if $options.reset
@@ -433,6 +429,9 @@ if not $options.output_file.nil?
    $output = FasterCSV.open($options.output_file, 'w')
    $output << ["username", "first name", "last name", "password"]
 end
+
+# Create the Google Apps user and objects
+user = config["apps"]["user"]+"@"+config["apps"]["domain"]
 
 accounts.each do |entry|
    #  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
@@ -463,6 +462,7 @@ end
 
 $options.threads.times do |n|
    workers << Thread.new do
+      puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
       apps = GData::GApps.new(user, config["apps"]["password"])
       prov = GData::Apps::Provisioning.new(apps)
       mail = GData::Apps::Email.new(apps)
