@@ -9,6 +9,7 @@ require 'net/ldap'
 require 'optparse'
 require 'digest/sha1'
 require 'thread'
+require 'timeout'
 
 require 'gdata'
 require 'gdata/apps'
@@ -23,6 +24,7 @@ class State
   def initialize(fn, timestamp="19700000000000Z", verbose=false)
     @verbose = verbose
     @timestamp = timestamp
+    @mutex = Mutex.new
     
     if !File.exists?(fn)
       needs_initialization = 1
@@ -88,13 +90,15 @@ class State
   end
   
   def update(entry)
-    @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
+    @mutex.synchronize {   
+      @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
 
-    if exists?(entry)
-      @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
-    else
-      @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
-    end
+      if exists?(entry)
+        @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
+      else
+        @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
+      end
+    }
   end
   
   def check(entry, source_stamp)
@@ -154,6 +158,8 @@ def create_and_update_user(apps, entry)
       # create user
       puts "Creating user #{username}." if $options.verbose
       result = apps.create_user(username, first, last, password)
+    rescue Timeout::Error
+      retry
     rescue GData::GDataError => e
       puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
       if e.code == "503"
@@ -176,6 +182,8 @@ def create_and_update_user(apps, entry)
       # update so they don't have to change their password at next login
       puts "Setting password reset to false for #{username}." if $options.verbose
       result = apps.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
+    rescue Timeout::Error
+      retry
     rescue GData::GDataError => e
       puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
       if e.code == "503"
@@ -197,6 +205,8 @@ def create_and_update_user(apps, entry)
         # Add the email address they're used to seeing
         puts "Adding alias #{nickname} to #{username}." if $options.verbose
         result = apps.create_nickname(username, nickname)
+      rescue Timeout::Error
+        retry
       rescue GData::GDataError => e
         puts "errorcode = " +e.code, "input : "+e.input, "reason : "+e.reason if $options.verbose
         if e.code == "503"
