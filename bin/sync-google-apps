@@ -30,7 +30,8 @@ class State
 
       puts "Creating state db updated thread" if $options.verbose
       @updater = Thread.new(process_updates)
-
+      Thread.pass
+      
       if !File.exists?(fn)
          needs_initialization = 1
       end
@@ -105,7 +106,6 @@ class State
           entry,ts = @updates.pop
           update(entry,ts)
         end
-        puts "Passing control to another thread from state update thread." if $options.verbose
         Thread.pass
       end
       Thread.exit
