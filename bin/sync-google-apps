@@ -29,8 +29,7 @@ class State
       @running = true
 
       puts "Creating state db updated thread" if $options.verbose
-      @updater = Thread.new(process_updates)
-      Thread.pass
+      process_updates
       
       if !File.exists?(fn)
          needs_initialization = 1
@@ -100,15 +99,17 @@ class State
    end
 
    def process_updates
-      while @running or not @updates.empty?
-        if @updates.length > 0
-          puts "Processing state update" if $options.verbose
-          entry,ts = @updates.pop
-          update(entry,ts)
+     @updater = Thread.new do
+        while @running or not @updates.empty?
+          if @updates.length > 0
+            puts "Processing state update" if $options.verbose
+            entry,ts = @updates.pop
+            update(entry,ts)
+          end
+          Thread.pass
         end
-        Thread.pass
-      end
-      Thread.exit
+        Thread.exit
+    end
    end
 
    def update(entry, ts=Time.now.gmtime.strftime("%Y%m%d%H%M00Z"))
