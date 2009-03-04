@@ -101,11 +101,14 @@ class State
    def process_updates
       while @running or not @updates.empty?
         if @updates.length > 0
+          puts "Processing state update" if $options.verbose
           entry,ts = @updates.pop
           update(entry,ts)
         end
+        puts "Passing control to another thread from state update thread." if $options.verbose
         Thread.pass
       end
+      Thread.exit
    end
 
    def update(entry, ts=Time.now.gmtime.strftime("%Y%m%d%H%M00Z"))
