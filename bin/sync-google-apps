@@ -477,11 +477,11 @@ $options.threads.times do |n|
    end
 end
 
-# Stop the state_db from updating itself
-state_db.stop
-
 # Wait for workers to finish
 workers.each { |w| w.join }
+
+# Stop the state_db from updating itself
+state_db.stop
 
 # Update our local timestamp
 state_db.update_timestamp if not $options.reset
