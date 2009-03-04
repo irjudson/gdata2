@@ -355,7 +355,12 @@ module GData #:nodoc:
          # NicknameEntry constructor. Needs a REXML::Element <entry> as parameter
          def initialize(entry) #:nodoc:
             @login = entry.elements["apps:login"].attributes["userName"]
-            @nickname = entry.elements["apps:nickname"].attributes["name"]
+            if entry.elements["apps:nickname"].nil?
+              # IRJ Some call is failing 10 minutes into a run, I'll debug 
+              @nickname = nil
+            else
+              @nickname = entry.elements["apps:nickname"].attributes["name"]
+            end
          end
       end
 
