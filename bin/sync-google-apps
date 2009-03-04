@@ -105,14 +105,14 @@ class State
     end
   end
   
-  def update(entry, @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z"))
+  def update(entry, ts=Time.now.gmtime.strftime("%Y%m%d%H%M00Z"))
     @mutex.synchronize {   
       if exists?(entry)
-        puts "Updating #{entry} with TS: #{@timestamp}"
-        @db.execute("UPDATE users SET last_modified = '#{@timestamp}' WHERE 'idx=#{entry}';")
+        puts "Updating #{entry} with TS: #{ts}"
+        @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE 'idx=#{entry}';")
       else
-        puts "Inserting #{entry} with TS: #{@timestamp}"
-        @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{@timestamp}');")
+        puts "Inserting #{entry} with TS: #{ts}"
+        @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
       end
     }
   end
