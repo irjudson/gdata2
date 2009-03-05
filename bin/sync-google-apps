@@ -175,7 +175,7 @@ def create_and_update_user(apps, entry, config)
    password = random_password
    nickname = uid_alias
    update = false
-   
+
    # First create them
    backoff_factor = 2
    result = nil
@@ -196,7 +196,7 @@ def create_and_update_user(apps, entry, config)
             update = true
             break
          end
-       ensure
+      ensure
          puts "Terminated create"
       end
    end
@@ -217,13 +217,12 @@ def create_and_update_user(apps, entry, config)
             result = nil
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
-            elsif e.code = "1300"
-               update = true
-               break
-            end
-          ensure
-            puts "Terminated create"
+         elsif e.code = "1300"
+            update = true
+            break
          end
+      ensure
+         puts "Terminated create"
       end
    end
 
@@ -244,13 +243,12 @@ def create_and_update_user(apps, entry, config)
                result = nil
                sleep(backoff_factor)
                backoff_factor *= backoff_factor
-               elsif e.code = "1300"
-                  update = true
-                  break
-               end
-             ensure
-               puts "Terminated create"
+            elsif e.code = "1300"
+               update = true
+               break
             end
+         ensure
+            puts "Terminated create"
          end
       end
    end
@@ -277,42 +275,40 @@ def create_and_update_user(apps, entry, config)
                   result = nil
                   sleep(backoff_factor)
                   backoff_factor *= backoff_factor
-                  elsif e.code = "1300"
-                     update = true
-                     break
-                  end
-                ensure
-                  puts "Terminated create"
-                end
-            end
-         end
-      end
-   end
-
-   if config['apps']['domain'] != config['apps']['maildomain']
-      # This means we need a send_as alias
-      backoff_factor = 2
-      result = nil
-      send_as_name = "#{first} #{last}"
-      send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
-      while result.nil?
-         begin
-            # Add the email address they're used to seeing
-            puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
-            result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
-         rescue Timeout::Error
-            retry
-         rescue GData::GDataError => e
-            puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-            if e.code == "503"
-               result = nil
-               sleep(backoff_factor)
-               backoff_factor *= backoff_factor
                elsif e.code = "1300"
                   update = true
                   break
                end
-             ensure
+            ensure
+               puts "Terminated create"
+            end
+         end
+      end
+
+      if config['apps']['domain'] != config['apps']['maildomain']
+         # This means we need a send_as alias
+         backoff_factor = 2
+         result = nil
+         send_as_name = "#{first} #{last}"
+         send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
+         while result.nil?
+            begin
+               # Add the email address they're used to seeing
+               puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
+               result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+            rescue Timeout::Error
+               retry
+            rescue GData::GDataError => e
+               puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
+               if e.code == "503"
+                  result = nil
+                  sleep(backoff_factor)
+                  backoff_factor *= backoff_factor
+               elsif e.code = "1300"
+                  update = true
+                  break
+               end
+            ensure
                puts "Terminated create"
             end
          end
