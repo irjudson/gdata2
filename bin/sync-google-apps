@@ -192,12 +192,14 @@ def create_and_update_user(apps, entry, config)
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
          elsif e.code = "1300"
-            return true
+            return true            
          end
+       ensure
+         if result.nil?
+         puts "Terminated create"
       end
    end
 
-   puts "Passed user create."
    # Then set the password reset to false so they don't have to change it at next login
    backoff_factor = 2
    result = nil
