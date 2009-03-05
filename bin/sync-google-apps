@@ -174,7 +174,8 @@ def create_and_update_user(apps, entry, config)
    last = entry.sn
    password = random_password
    nickname = uid_alias
-
+   update = false
+   
    # First create them
    backoff_factor = 2
    result = nil
@@ -192,7 +193,8 @@ def create_and_update_user(apps, entry, config)
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
          elsif e.code = "1300"
-            return true            
+            update = true
+            break
          end
        ensure
          puts "Terminated create"
@@ -215,6 +217,12 @@ def create_and_update_user(apps, entry, config)
             result = nil
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
+            elsif e.code = "1300"
+               update = true
+               break
+            end
+          ensure
+            puts "Terminated create"
          end
       end
    end
@@ -236,8 +244,12 @@ def create_and_update_user(apps, entry, config)
                result = nil
                sleep(backoff_factor)
                backoff_factor *= backoff_factor
-            elsif e.code = "1300"
-               return true
+               elsif e.code = "1300"
+                  update = true
+                  break
+               end
+             ensure
+               puts "Terminated create"
             end
          end
       end
@@ -265,9 +277,13 @@ def create_and_update_user(apps, entry, config)
                   result = nil
                   sleep(backoff_factor)
                   backoff_factor *= backoff_factor
-               elsif e.code = "1300"
-                  return true
-               end
+                  elsif e.code = "1300"
+                     update = true
+                     break
+                  end
+                ensure
+                  puts "Terminated create"
+                end
             end
          end
       end
@@ -292,14 +308,18 @@ def create_and_update_user(apps, entry, config)
                result = nil
                sleep(backoff_factor)
                backoff_factor *= backoff_factor
-            elsif e.code = "1300"
-               return true
+               elsif e.code = "1300"
+                  update = true
+                  break
+               end
+             ensure
+               puts "Terminated create"
             end
          end
       end
    end
 
-   return true
+   return update
 end
 
 def print_user(entry, config)
