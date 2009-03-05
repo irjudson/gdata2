@@ -20,7 +20,7 @@ $source = nil
 $queue = Queue.new
 
 class State
-   attr_read :timestamp
+   attr_reader :timestamp
   
    def initialize(fn, timestamp="19700000000000Z")
       @timestamp = timestamp
