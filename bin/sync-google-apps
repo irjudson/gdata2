@@ -14,6 +14,7 @@ require 'faster_csv'
 
 require 'gdata'
 require 'gdata/apps'
+require 'timestamp'
 
 $options = OpenStruct.new
 $queue = Queue.new
@@ -311,7 +312,7 @@ def create_and_update_user(apps, entry, config)
      $count += 1
    }
    if ($count % 100)
-     puts "Processed #{$count}"
+     puts "#{time_stamp} : Processed #{$count}"
    end
    return update
 end
