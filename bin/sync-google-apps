@@ -196,8 +196,6 @@ def create_and_update_user(apps, entry, config)
             update = true
             break
          end
-      ensure
-         puts "Terminated create"
       end
    end
 
@@ -221,8 +219,6 @@ def create_and_update_user(apps, entry, config)
             update = true
             break
          end
-      ensure
-         puts "Terminated create"
       end
    end
 
@@ -247,8 +243,6 @@ def create_and_update_user(apps, entry, config)
                update = true
                break
             end
-         ensure
-            puts "Terminated create"
          end
       end
    end
@@ -279,8 +273,6 @@ def create_and_update_user(apps, entry, config)
                   update = true
                   break
                end
-            ensure
-               puts "Terminated create"
             end
          end
       end
@@ -308,8 +300,6 @@ def create_and_update_user(apps, entry, config)
                   update = true
                   break
                end
-            ensure
-               puts "Terminated create"
             end
          end
       end
