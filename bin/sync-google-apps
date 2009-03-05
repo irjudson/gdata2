@@ -23,7 +23,6 @@ class State
    attr_reader :timestamp
   
    def initialize(fn, timestamp="19700000000000Z")
-      @timestamp = timestamp
       @mutex = Mutex.new
       @updates = Queue.new
       @running = true
@@ -41,6 +40,8 @@ class State
 
       if needs_initialization
          do_initialization
+       else
+         @timestamp = @db.execute("SELECT * FROM updates;")[0]
       end
    end
 
