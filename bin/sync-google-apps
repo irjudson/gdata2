@@ -21,7 +21,7 @@ $queue = Queue.new
 
 class State
    attr_reader :timestamp
-  
+
    def initialize(fn, timestamp="19700000000000Z")
       @mutex = Mutex.new
       @updates = Queue.new
@@ -29,7 +29,7 @@ class State
 
       puts "Creating state db updated thread" if $options.verbose
       process_updates
-      
+
       if !File.exists?(fn)
          needs_initialization = 1
       end
@@ -40,7 +40,7 @@ class State
 
       if needs_initialization
          do_initialization
-       else
+      else
          @timestamp = @db.execute("SELECT * FROM updates;")[0]
       end
    end
@@ -94,23 +94,23 @@ class State
    end
 
    def process_updates
-     @updater = Thread.new do
-       puts "Creating process update thread." if $options.debug
-        while @running || ! @updates.empty?
-          if @updates.length > 0
-            puts "Processing state update" if $options.debug
-            entry,ts = @updates.pop
-            update(entry,ts)
-          end
-        end
-        puts "Exiting process update thread." if $options.debug
-        Thread.exit
-    end
+      @updater = Thread.new do
+         puts "Creating process update thread." if $options.debug
+         while @running || ! @updates.empty?
+            if @updates.length > 0
+               puts "Processing state update" if $options.debug
+               entry,ts = @updates.pop
+               update(entry,ts)
+            end
+         end
+         puts "Exiting process update thread." if $options.debug
+         Thread.exit
+      end
    end
 
    def update(entry, ts=nil)
       ts ||= Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
-    
+
       @mutex.synchronize {
          if exists?(entry)
             puts "Updating #{entry} with TS: #{ts}" if $options.debug
@@ -193,12 +193,11 @@ def create_and_update_user(apps, entry, config)
             backoff_factor *= backoff_factor
          elsif e.code = "1300"
             return true
-         else
-            return false
          end
       end
    end
 
+   puts "Passed user create."
    # Then set the password reset to false so they don't have to change it at next login
    backoff_factor = 2
    result = nil
@@ -215,8 +214,6 @@ def create_and_update_user(apps, entry, config)
             result = nil
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
-         else
-            return false
          end
       end
    end
@@ -240,73 +237,67 @@ def create_and_update_user(apps, entry, config)
                backoff_factor *= backoff_factor
             elsif e.code = "1300"
                return true
-            else
-               return false
             end
          end
       end
    end
 
    if $options.forward
-     address_list = config['forwards']
-     entry.montanaEduPersonClassicRoles.each do |role|
-       domain = address_list[role[0..2]]
-       forward = "#{nickname}@#{domain}"
-       
-       # Set the forward if we are doing that
-       backoff_factor = 2
-       result = nil
-       while result.nil?
-         begin
-           # Add the email address they're used to seeing
-           puts "Adding mailforward #{forward} to #{username}." if $options.verbose
-           result = apps.mail.update_forward(username, forward)
-         rescue Timeout::Error
-           retry
-         rescue GData::GDataError => e
-           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-           if e.code == "503"
-             result = nil
-             sleep(backoff_factor)
-             backoff_factor *= backoff_factor
-           elsif e.code = "1300"
-             return true
-           else
-             return false
-           end
+      address_list = config['forwards']
+      entry.montanaEduPersonClassicRoles.each do |role|
+         domain = address_list[role[0..2]]
+         forward = "#{nickname}@#{domain}"
+
+         # Set the forward if we are doing that
+         backoff_factor = 2
+         result = nil
+         while result.nil?
+            begin
+               # Add the email address they're used to seeing
+               puts "Adding mailforward #{forward} to #{username}." if $options.verbose
+               result = apps.mail.update_forward(username, forward)
+            rescue Timeout::Error
+               retry
+            rescue GData::GDataError => e
+               puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
+               if e.code == "503"
+                  result = nil
+                  sleep(backoff_factor)
+                  backoff_factor *= backoff_factor
+               elsif e.code = "1300"
+                  return true
+               end
+            end
          end
-       end
-     end
+      end
    end
 
    if config['apps']['domain'] != config['apps']['maildomain']
-   # This means we need a send_as alias
-     backoff_factor = 2
-     result = nil
-     send_as_name = "#{first} #{last}"
-     send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
-     while result.nil?
-        begin
-           # Add the email address they're used to seeing
-           puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
-           result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
-        rescue Timeout::Error
-           retry
-        rescue GData::GDataError => e
-           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-           if e.code == "503"
-              result = nil
-              sleep(backoff_factor)
-              backoff_factor *= backoff_factor
-           elsif e.code = "1300"
-              return true
-           else
-              return false
-           end
-        end
-     end   
+      # This means we need a send_as alias
+      backoff_factor = 2
+      result = nil
+      send_as_name = "#{first} #{last}"
+      send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
+      while result.nil?
+         begin
+            # Add the email address they're used to seeing
+            puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
+            result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+         rescue Timeout::Error
+            retry
+         rescue GData::GDataError => e
+            puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
+            if e.code == "503"
+               result = nil
+               sleep(backoff_factor)
+               backoff_factor *= backoff_factor
+            elsif e.code = "1300"
+               return true
+            end
+         end
+      end
    end
-   
+
    return true
 end
 
@@ -437,9 +428,9 @@ state_db.reset if $options.reset
 
 # Get the right timestamp to compare against for retrieving users from source data
 if $options.reset
-  ts = Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
+   ts = Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
 else
-  ts = state_db.timestamp
+   ts = state_db.timestamp
 end
 
 # Pull attributes from the directory for users that have been modified since last run
