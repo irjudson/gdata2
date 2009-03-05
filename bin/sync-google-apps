@@ -312,7 +312,7 @@ def create_and_update_user(apps, entry, config)
      $count += 1
    }
    if ($count % 100)
-     puts "#{time_stamp} : Processed #{$count}"
+     puts "#{time_stamp(Time.now)} : Processed #{$count}"
    end
    return update
 end
