@@ -95,15 +95,15 @@ class State
 
    def process_updates
      @updater = Thread.new do
-       puts "Creating process update thread." if $options.verbose
+       puts "Creating process update thread." if $options.debug
         while @running || ! @updates.empty?
           if @updates.length > 0
-            puts "Processing state update" if $options.verbose
+            puts "Processing state update" if $options.debug
             entry,ts = @updates.pop
             update(entry,ts)
           end
         end
-        puts "Exiting process update thread." if $options.verbose
+        puts "Exiting process update thread." if $options.debug
         Thread.exit
     end
    end
@@ -186,7 +186,7 @@ def create_and_update_user(apps, entry, config)
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
-         puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+         puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
          if e.code == "503"
             result = nil
             sleep(backoff_factor)
@@ -233,7 +233,7 @@ def create_and_update_user(apps, entry, config)
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
-            puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+            puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
             if e.code == "503"
                result = nil
                sleep(backoff_factor)
@@ -264,7 +264,7 @@ def create_and_update_user(apps, entry, config)
          rescue Timeout::Error
            retry
          rescue GData::GDataError => e
-           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
            if e.code == "503"
              result = nil
              sleep(backoff_factor)
@@ -293,7 +293,7 @@ def create_and_update_user(apps, entry, config)
         rescue Timeout::Error
            retry
         rescue GData::GDataError => e
-           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
+           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
            if e.code == "503"
               result = nil
               sleep(backoff_factor)
