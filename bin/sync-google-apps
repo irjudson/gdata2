@@ -312,7 +312,7 @@ def create_and_update_user(apps, entry, config)
      $count += 1
    }
    if ($count % 100)
-     puts "#{Time.now.to_datetime.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
+     puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
    end
    return update
 end
