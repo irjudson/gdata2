@@ -113,10 +113,10 @@ class State
     
       @mutex.synchronize {
          if exists?(entry)
-            puts "Updating #{entry} with TS: #{ts}" if $options.verbose
+            puts "Updating #{entry} with TS: #{ts}" if $options.debug
             @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE 'idx=#{entry}';")
          else
-            puts "Inserting #{entry} with TS: #{ts}" if $options.verbose
+            puts "Inserting #{entry} with TS: #{ts}" if $options.debug
             @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
          end
       }
