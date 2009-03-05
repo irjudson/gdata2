@@ -195,7 +195,6 @@ def create_and_update_user(apps, entry, config)
             return true            
          end
        ensure
-         if result.nil?
          puts "Terminated create"
       end
    end
