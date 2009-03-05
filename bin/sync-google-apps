@@ -185,8 +185,7 @@ def create_and_update_user(apps, entry, config)
       begin
          # create user
          puts "Creating user #{username}." if $options.verbose
-         #result = apps.provision.create_user(username, first, last, password)
-         result = 1
+         result = apps.provision.create_user(username, first, last, password)
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
@@ -210,8 +209,7 @@ def create_and_update_user(apps, entry, config)
       begin
          # update so they don't have to change their password at next login
          puts "Setting password reset to false for #{username}." if $options.verbose
-         #result = apps.provision.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
-         result = 1
+         result = apps.provision.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
@@ -234,8 +232,7 @@ def create_and_update_user(apps, entry, config)
          begin
             # Add the email address they're used to seeing
             puts "Adding alias #{nickname} to #{username}." if $options.verbose
-            #result = apps.provision.create_nickname(username, nickname)
-            result = 1
+            result = apps.provision.create_nickname(username, nickname)
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
@@ -265,9 +262,8 @@ def create_and_update_user(apps, entry, config)
        while result.nil?
          begin
            # Add the email address they're used to seeing
-           puts "Adding mailforward #{forward} to #{username}."
-           #result = apps.mail.update_forward(username, forward)
-           result = 1
+           puts "Adding mailforward #{forward} to #{username}." if $options.verbose
+           result = apps.mail.update_forward(username, forward)
          rescue Timeout::Error
            retry
          rescue GData::GDataError => e
