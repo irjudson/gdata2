@@ -311,7 +311,7 @@ def create_and_update_user(apps, entry, config)
    $sync.synchronize {
      $count += 1
    }
-   if ($count % 100 != 0)
+   if (($count % 100) != 0)
      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
    end
    return update
