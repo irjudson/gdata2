@@ -278,9 +278,6 @@ def create_and_update_user(apps, entry, config)
       end
    end
 
-   puts "CONFIG"
-   puts "#{config['apps'].to_s}"
-
    if config['apps']['domain'] != config['apps']['maildomain']
       # This means we need a send_as alias
       backoff_factor = 2
@@ -291,7 +288,8 @@ def create_and_update_user(apps, entry, config)
          begin
             # Add the email address they're used to seeing
             puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
-            result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+            #result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+            result = 1
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
