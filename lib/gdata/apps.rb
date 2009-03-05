@@ -57,6 +57,7 @@ module GData #:nodoc:
       def login(mail, passwd)
          mesg = '&Email='+CGI.escape(mail)+'&Passwd='+CGI.escape(passwd)+'&accountType=HOSTED&service=apps'
          res = request(:domain_login, nil, mesg, {'Content-Type'=>'application/x-www-form-urlencoded'})
+         puts "RESPONSE: #{res}
          return /^Auth=(.+)$/.match(res.to_s)[1]
          # res.to_s needed, because res.class = REXML::Document
       end
