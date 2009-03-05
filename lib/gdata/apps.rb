@@ -2,6 +2,8 @@ $:.unshift(File.expand_path(File.dirname(__FILE__))) unless
 $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
 require 'cgi'
+require 'thread'
+
 require 'gdata/apps/provisioning'
 require 'gdata/apps/email'
 
@@ -44,7 +46,7 @@ module GData #:nodoc:
          @token = login(user, passwd)
          # Reset the connection for thread safety, it only costs one more connection creation, but 
          # it makes the token shared and things avoid ickyness.
-         @connection = nil
+         Thread.current[:connection] = nil
          @headers = {'Content-Type'=>'application/atom+xml', 'Authorization'=> 'GoogleLogin auth='+token}
          @provision = GData::Apps::Provisioning.new(self)
          @mail = GData::Apps::Email.new(self)
@@ -78,10 +80,10 @@ module GData #:nodoc:
          method = @actions[action][:method]
          value = '' if !value
          path = @actions[action][:path]+value
-         if @connection.nil?
-           @connection = Connection.new(@@google_host, @@google_port, @proxy, @proxy_port, @proxy_user, @proxy_passwd)
+         if Thread.current[:connection].nil?
+           Thread.current[:connection] = Connection.new(@@google_host, @@google_port, @proxy, @proxy_port, @proxy_user, @proxy_passwd)
          end
-         response = @connection.perform(method, path, message, headers)
+         response = Thread.current[:connection].perform(method, path, message, headers)
          response_xml = parse_response(response)
          return response_xml
       end
