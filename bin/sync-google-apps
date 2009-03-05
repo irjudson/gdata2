@@ -288,8 +288,7 @@ def create_and_update_user(apps, entry, config)
          begin
             # Add the email address they're used to seeing
             puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
-            #result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
-            result = 1
+            result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
