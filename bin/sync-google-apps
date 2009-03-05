@@ -277,6 +277,8 @@ def create_and_update_user(apps, entry, config)
          end
       end
 
+      puts "CONFIG"
+      puts "#{config['apps'].to_s}"
       if config['apps']['domain'] != config['apps']['maildomain']
          # This means we need a send_as alias
          backoff_factor = 2
