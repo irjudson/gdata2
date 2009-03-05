@@ -37,14 +37,23 @@ module GData #:nodoc:
          @domain = user.split('@')[1]
          @actions = Hash.new
          @actions[:domain_login] = {:method => 'POST', :path => '/accounts/ClientLogin' }
-         @connection = Connection.new(@@google_host, @@google_port, proxy, proxy_port, proxy_user, proxy_passwd)
+         @proxy = proxy
+         @proxy_port = proxy_port
+         @proxy_user = proxy_user
+         @proxy_passwd = proxy_passwd
          @token = login(user, passwd)
+         # Reset the connection for thread safety, it only costs one more connection creation, but 
+         # it makes the token shared and things avoid ickyness.
+         @connection = nil
          @headers = {'Content-Type'=>'application/atom+xml', 'Authorization'=> 'GoogleLogin auth='+token}
          @provision = GData::Apps::Provisioning.new(self)
          @mail = GData::Apps::Email.new(self)
          return @connection
       end
-
+      
+      def recreate_connection
+      end
+      
       def register_action(method, action)
          if @actions.has_key?(method)
             return -1
@@ -57,7 +66,6 @@ module GData #:nodoc:
       def login(mail, passwd)
          mesg = '&Email='+CGI.escape(mail)+'&Passwd='+CGI.escape(passwd)+'&accountType=HOSTED&service=apps'
          res = request(:domain_login, nil, mesg, {'Content-Type'=>'application/x-www-form-urlencoded'})
-         puts "RESPONSE: #{res}"
          return /^Auth=(.+)$/.match(res.to_s)[1]
          # res.to_s needed, because res.class = REXML::Document
       end
@@ -70,6 +78,9 @@ module GData #:nodoc:
          method = @actions[action][:method]
          value = '' if !value
          path = @actions[action][:path]+value
+         if @connection.nil?
+           @connection = Connection.new(@@google_host, @@google_port, @proxy, @proxy_port, @proxy_user, @proxy_passwd)
+         end
          response = @connection.perform(method, path, message, headers)
          response_xml = parse_response(response)
          return response_xml
