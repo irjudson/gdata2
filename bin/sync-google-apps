@@ -41,8 +41,6 @@ class State
 
       if needs_initialization
          do_initialization
-      else
-         update_timestamp
       end
    end
 
