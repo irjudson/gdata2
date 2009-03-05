@@ -16,8 +16,10 @@ require 'gdata'
 require 'gdata/apps'
 
 $options = OpenStruct.new
-$source = nil
 $queue = Queue.new
+$sync = Mutex.new
+$source = nil
+$count = 0
 
 class State
    attr_reader :timestamp
@@ -304,7 +306,13 @@ def create_and_update_user(apps, entry, config)
          end
       end
    end
-
+   
+   $sync.synchronize {
+     $count += 1
+   }
+   if ($count % 100)
+     puts "Processed #{$count}"
+   end
    return update
 end
 
@@ -458,7 +466,7 @@ if not $options.output_file.nil?
 end
 
 accounts.each do |entry|
-   puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
+   puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.debug
    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
       if $output.nil?
          $queue.push(entry)
