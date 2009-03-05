@@ -20,6 +20,8 @@ $source = nil
 $queue = Queue.new
 
 class State
+   attr_read :timestamp
+  
    def initialize(fn, timestamp="19700000000000Z")
       @timestamp = timestamp
       @mutex = Mutex.new
@@ -68,15 +70,11 @@ class State
       end
    end
 
-   def timestamp
-      return @timestamp
-   end
-
    def update_timestamp
-      ts=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
+      @timestamp=Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
 
       @db.execute("DELETE FROM updates;")
-      @db.execute("INSERT INTO updates (ts) VALUES ('#{ts}');")
+      @db.execute("INSERT INTO updates (ts) VALUES ('#{@timestamp}');")
    end
 
    def count_users
@@ -292,7 +290,7 @@ def create_and_update_user(apps, entry, config)
         begin
            # Add the email address they're used to seeing
            puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
-           result = apps.mail.create_send_as(username, send_as_name, send_as_alias)
+           result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
         rescue Timeout::Error
            retry
         rescue GData::GDataError => e
