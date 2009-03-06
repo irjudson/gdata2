@@ -29,7 +29,8 @@ class State
       @mutex = Mutex.new
       @updates = Queue.new
       @running = true
-
+      @timestamp = nil
+      
       puts "Creating state db updated thread" if $options.verbose
       process_updates
 
@@ -50,7 +51,6 @@ class State
 
    def do_initialization
       puts "Initializing state database." if $options.verbose
-      @timestamp = Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
       @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
       @db.execute("CREATE TABLE updates (ts TEXT);")
    end
@@ -444,10 +444,9 @@ state_db = State.new(config["state"]["file"])
 state_db.reset if $options.reset
 
 # Get the right timestamp to compare against for retrieving users from source data
-if $options.reset
+ts = state_db.timestamp
+if $options.reset || ts.nil?
    ts = Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
-else
-   ts = state_db.timestamp
 end
 
 # Pull attributes from the directory for users that have been modified since last run
