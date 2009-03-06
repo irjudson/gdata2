@@ -409,10 +409,6 @@ OptionParser.new do |opts|
       $options.output_file = o.to_s
    end
 
-   opts.on("-f", "--forwards", "Set forwarding addresses according to associations in configuration file.") do |o|
-      $options.forward = true
-   end
-
    opts.on_tail("--version", "Show version") do
       puts OptionParser::Version.join('.')
    end
@@ -420,6 +416,9 @@ end.parse!
 
 # Load configuration file
 config = YAML.load_file($options.config)
+if config.has_key?('forwards')
+  $options.forward = true
+end
 
 # Create a source object to pull data from
 if config["source"]["type"] == "ldap"
