@@ -185,7 +185,7 @@ def create_and_update_user(apps, entry, config)
    while result.nil?
       begin
          # create user
-         puts "Creating user #{username}." if $options.verbose
+         puts "#{$count} Creating user #{username}." if $options.verbose
          result = apps.provision.create_user(username, first, last, password)
       rescue Timeout::Error
          retry
@@ -208,7 +208,7 @@ def create_and_update_user(apps, entry, config)
    while result.nil?
       begin
          # update so they don't have to change their password at next login
-         puts "Setting password reset to false for #{username}." if $options.verbose
+         puts "    Setting password reset to false for #{username}." if $options.verbose
          result = apps.provision.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
       rescue Timeout::Error
          retry
@@ -232,7 +232,7 @@ def create_and_update_user(apps, entry, config)
       while result.nil?
          begin
             # Add the email address they're used to seeing
-            puts "Adding alias #{nickname} to #{username}." if $options.verbose
+            puts "    Adding alias #{nickname} to #{username}." if $options.verbose
             result = apps.provision.create_nickname(username, nickname)
          rescue Timeout::Error
             retry
@@ -262,7 +262,7 @@ def create_and_update_user(apps, entry, config)
          while result.nil?
             begin
                # Add the email address they're used to seeing
-               puts "Adding mailforward #{forward} to #{username}." if $options.verbose
+               puts "    Adding mailforward #{forward} to #{username}." if $options.verbose
                result = apps.mail.update_forward(username, forward)
             rescue Timeout::Error
                retry
@@ -290,7 +290,7 @@ def create_and_update_user(apps, entry, config)
       while result.nil?
          begin
             # Add the email address they're used to seeing
-            puts "Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
+            puts "    Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
             result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
          rescue Timeout::Error
             retry
@@ -498,13 +498,15 @@ $options.threads.times do |n|
    $queue.push(:terminate)
 end
 
+entry = nil
 $options.threads.times do |n|
    workers << Thread.new do
       loop do
-         entry = $queue.pop
-         break if entry == :terminate
-
-         if create_and_update_user(apps, entry, config)
+        $sync.synchronize { entry = $queue.pop }
+         if entry == :terminate
+           puts "Terminating thread."
+           break
+         elsif create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
