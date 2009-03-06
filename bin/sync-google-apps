@@ -30,7 +30,7 @@ class State
       @updates = Queue.new
       @running = true
       @timestamp = nil
-      
+
       puts "Creating state db updated thread" if $options.verbose
       process_updates
 
@@ -121,7 +121,7 @@ class State
           @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
         end
       rescue SQLite3::SQLException => e
-        
+
       end
    end
 
@@ -518,7 +518,7 @@ $options.threads.times do |n|
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
-
+    Thread.exit
    end
 end
 
