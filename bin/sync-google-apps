@@ -100,14 +100,10 @@ class State
       @updater = Thread.new do
          puts "Creating process update thread." if $options.debug
          while @running || ! @updates.empty?
-            if @updates.length > 0
-               puts "Processing state update" if $options.debug
-               entry,ts = @updates.pop
-               update(entry,ts)
-            end
+           puts "Processing state update" if $options.debug
+           entry,ts = @updates.pop
+           update(entry,ts)
          end
-         puts "Exiting process update thread." if $options.debug
-         Thread.exit
       end
    end
 
