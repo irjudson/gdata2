@@ -506,6 +506,7 @@ $options.threads.times do |n|
          if entry == :terminate
             puts "Terminating thread."
             break
+          end
          if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
