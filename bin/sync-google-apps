@@ -187,6 +187,7 @@ def create_and_update_user(apps, entry, config)
          # create user
          puts "#{$count} Creating user #{username}." if $options.verbose
          result = apps.provision.create_user(username, first, last, password)
+         puts "Result: #{res}" if $options.debug
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
@@ -196,6 +197,7 @@ def create_and_update_user(apps, entry, config)
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
          elsif e.code = "1300"
+            puts "...Exists" if $options.debug
             update = true
             break
          end
@@ -210,6 +212,7 @@ def create_and_update_user(apps, entry, config)
          # update so they don't have to change their password at next login
          puts "    Setting password reset to false for #{username}." if $options.verbose
          result = apps.provision.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
+         puts "Result: #{res}" if $options.debug
       rescue Timeout::Error
          retry
       rescue GData::GDataError => e
@@ -219,6 +222,7 @@ def create_and_update_user(apps, entry, config)
             sleep(backoff_factor)
             backoff_factor *= backoff_factor
          elsif e.code = "1300"
+            puts "...Exists" if $options.debug
             update = true
             break
          end
@@ -234,6 +238,7 @@ def create_and_update_user(apps, entry, config)
             # Add the email address they're used to seeing
             puts "    Adding alias #{nickname} to #{username}." if $options.verbose
             result = apps.provision.create_nickname(username, nickname)
+            puts "Result: #{res}" if $options.debug
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
@@ -243,6 +248,7 @@ def create_and_update_user(apps, entry, config)
                sleep(backoff_factor)
                backoff_factor *= backoff_factor
             elsif e.code = "1300"
+               puts "...Exists" if $options.debug
                update = true
                break
             end
@@ -265,6 +271,7 @@ def create_and_update_user(apps, entry, config)
                   # Add the email address they're used to seeing
                   puts "    Adding mailforward #{forward} to #{username}." if $options.verbose
                   result = apps.mail.update_forward(username, forward)
+                  puts "Result: #{res}" if $options.debug
                rescue Timeout::Error
                   retry
                rescue GData::GDataError => e
@@ -274,6 +281,7 @@ def create_and_update_user(apps, entry, config)
                      sleep(backoff_factor)
                      backoff_factor *= backoff_factor
                   elsif e.code = "1300"
+                     puts "...Exists" if $options.debug
                      update = true
                      break
                   end
@@ -294,6 +302,7 @@ def create_and_update_user(apps, entry, config)
             # Add the email address they're used to seeing
             puts "    Adding send_as_alias #{send_as_name} / #{send_as_alias} to #{username}." if $options.verbose
             result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+            puts "Result: #{res}" if $options.debug
          rescue Timeout::Error
             retry
          rescue GData::GDataError => e
@@ -303,6 +312,7 @@ def create_and_update_user(apps, entry, config)
                sleep(backoff_factor)
                backoff_factor *= backoff_factor
             elsif e.code = "1300"
+               puts "...Exists" if $options.debug
                update = true
                break
             end
