@@ -513,10 +513,7 @@ $options.threads.times do |n|
    workers << Thread.new do
       loop do
          entry = $queue.pop
-         if entry == :terminate
-            puts "Terminating thread."
-            break
-          end
+         break if entry == :terminate
          if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
