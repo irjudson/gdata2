@@ -50,7 +50,7 @@ class State
 
    def do_initialization
       puts "Initializing state database." if $options.verbose
-
+      @timestamp = Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
       @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
       @db.execute("CREATE TABLE updates (ts TEXT);")
    end
