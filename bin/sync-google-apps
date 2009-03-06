@@ -85,8 +85,10 @@ class State
 
    def exists?(entry)
       ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")
-      if ts.length > 0
+      if ts.length == 1
          return true
+      elsif ts.length > 1
+           puts "More than one user found for id #{entry}"
       else
          return false
       end
