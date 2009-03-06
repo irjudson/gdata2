@@ -504,21 +504,23 @@ workers = []
 Thread.abort_on_exception = true
 
 # Push on a terminal value for each thread
-$options.threads.times do |n|
-   $queue.push(:terminate)
-end
+#$options.threads.times do |n|
+#   $queue.push("terminate")
+#end
 
 entry = nil
 $options.threads.times do |n|
    workers << Thread.new do
       loop do
          entry = $queue.pop
-         break if entry == :terminate
-         if create_and_update_user(apps, entry, config)
+#	 puts "Entry: #{entry.inspect} #{entry.class}"
+	 if entry.class.to_s != "Net::LDAP::Entry"
+	    break
+	 elsif create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
-    Thread.exit
+      Thread.exit
    end
 end
 
