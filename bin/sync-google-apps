@@ -507,8 +507,8 @@ Thread.abort_on_exception = true
 $chunk_size = $queue.length / $options.threads
 
 $options.threads.times do |n|
-   workers << Thread.new do
-     my_id = workers.index(Thread.current)
+   workers[n] = Thread.new do
+     my_id = n
      puts "Thread #{Thread.current} ID: #{my_id}"
      # Take work out of global queue
      my_chunk = $queue.select { |i| i if ($queue.index(i) % $options.threads) == 0 }
