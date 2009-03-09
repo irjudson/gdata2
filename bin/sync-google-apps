@@ -262,7 +262,7 @@ def create_and_update_user(apps, entry, config)
       entry.montanaEduPersonClassicRoles.each do |role|
          if role =~ /_s/
             domain = address_list[role[0..2]]
-            forward = "#{username}@#{domain}"
+            forward = "#{uid_alias.}@#{domain}"
 
             # Set the forward if we are doing that
             backoff_factor = 2
@@ -516,9 +516,12 @@ $options.threads.times do |n|
      #
      #
      #
-     my_chunk = Array.new
-     my_chunk = $queue.select{|i| $queue[i] if ($queue.index(i) % $options.threads == 0) }
-     puts "#{my_chunk}"
+     my_chunk = $queue.select do |i| 
+       if ($queue.index(i) % $options.threads) == 0
+         $queue[i]
+       end
+     end
+     puts "#{Thread.current} => #{my_chunk.length}"
      Thread.exit
       loop do
          entry = $queue.pop
