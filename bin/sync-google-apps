@@ -17,7 +17,8 @@ require 'gdata/apps'
 require 'timestamp'
 
 $options = OpenStruct.new
-$queue = Queue.new
+#$queue = Queue.new
+$queue = Array.new
 $sync = Mutex.new
 $source = nil
 $count = 0
@@ -480,7 +481,7 @@ accounts.each do |entry|
    puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.debug
    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
       if $output.nil?
-         $queue.push(entry)
+         $queue << entry
       else
          $output << ["#{entry.montanaEduPersonID}", "#{entry.givenname}", "#{entry.sn}", "#{random_password}"]
       end
@@ -511,6 +512,14 @@ Thread.abort_on_exception = true
 entry = nil
 $options.threads.times do |n|
    workers << Thread.new do
+     #
+     #
+     #
+     #
+     my_chunk = Array.new
+     my_chunk = $queue.select{|i| $queue[i] if ($queue.index(i) % $options.threads == 0) }
+     puts "#{my_chunk}"
+     Thread.exit
       loop do
          entry = $queue.pop
 #	 puts "Entry: #{entry.inspect} #{entry.class}"
