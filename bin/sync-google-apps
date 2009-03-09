@@ -509,11 +509,11 @@ $chunk_size = $queue.length / $options.threads
 $options.threads.times do |n|
    workers[n] = Thread.new do
      my_id = n
-     puts "Thread #{Thread.current} ID: #{my_id}"
      # Take work out of global queue
-     my_chunk = $queue.select { |i| i if ($queue.index(i) % $options.threads) == 0 }
+     my_start = my_id * $chunk_size
+     my_end = my_start + $chunk_size
+     puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
      # Set global queue to nil where we took the work out
-     puts "#{Thread.current} => #{my_chunk.length} / Leftovers: #{left_overs.length}"
      Thread.exit
       while my_chunk.length > 0
          entry = my_chunk.pop
