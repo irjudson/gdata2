@@ -89,7 +89,7 @@ class State
       if ts.length == 1
          return true
       elsif ts.length > 1
-           puts "More than one user found for id #{entry}"
+         puts "More than one user found for id #{entry}"
       else
          return false
       end
@@ -103,9 +103,9 @@ class State
       @updater = Thread.new do
          puts "Creating process update thread." if $options.debug
          while @running || ! @updates.empty?
-           puts "Processing state update" if $options.debug
-           entry,ts = @updates.pop
-           update(entry,ts)
+            puts "Processing state update" if $options.debug
+            entry,ts = @updates.pop
+            update(entry,ts)
          end
       end
    end
@@ -114,13 +114,13 @@ class State
       ts ||= Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
 
       begin
-        if exists?(entry)
-          puts "Updating #{entry} with TS: #{ts}" if $options.debug
-          @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}';")
-        else
-          puts "Inserting #{entry} with TS: #{ts}" if $options.debug
-          @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
-        end
+         if exists?(entry)
+            puts "Updating #{entry} with TS: #{ts}" if $options.debug
+            @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}';")
+         else
+            puts "Inserting #{entry} with TS: #{ts}" if $options.debug
+            @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
+         end
       rescue SQLite3::SQLException => e
 
       end
@@ -428,7 +428,7 @@ end.parse!
 # Load configuration file
 config = YAML.load_file($options.config)
 if config.has_key?('forwards')
-  $options.forward = true
+   $options.forward = true
 end
 
 # Create a source object to pull data from
@@ -508,15 +508,15 @@ $chunk_size = $queue.length / $options.threads
 
 $options.threads.times do |n|
    workers[n] = Thread.new do
-     my_id = n
-     # Take work out of global queue
-     my_start = my_id * $chunk_size
-     my_end = (my_start + $chunk_size) - 1
-    puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
-     (my_start..my_end).each do |index|
+      my_id = n
+      # Take work out of global queue
+      my_start = my_id * $chunk_size
+      my_end = (my_start + $chunk_size) - 1
+      puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
+      (my_start..my_end).each do |index|
          entry = $queue[index]
          #	 puts "Entry: #{entry.inspect} #{entry.class}"
-	       if create_and_update_user(apps, entry, config)
+         if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
@@ -536,15 +536,14 @@ leftovers_start = $options.threads * $chunk_size
 left_overs_length = $queue.length - leftovers_start
 puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
 (leftovers_start..($queue.length-1)).each do |index|
-    workers[index] = Thread.new do
+   workers[index] = Thread.new do
       my_id = index
       entry = $queue[index]
       #	 puts "Entry: #{entry.inspect} #{entry.class}"
       if create_and_update_user(apps, entry, config)
-        state_db.push_update(entry.uniqueIdentifier)
+         state_db.push_update(entry.uniqueIdentifier)
       end
-    end
- end
+   end
 end
 workers.each {|w| w.join }
 print "done.\n"
