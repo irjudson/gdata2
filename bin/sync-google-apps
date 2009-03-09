@@ -511,7 +511,7 @@ $options.threads.times do |n|
       # Take work out of global queue
       my_start = my_id * $chunk_size
       my_end = (my_start + $chunk_size) - 1
-      puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
+      puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
       (my_start..my_end).each do |index|
          entry = $queue[index]
          #	 puts "Entry: #{entry.inspect} #{entry.class}"
@@ -519,7 +519,7 @@ $options.threads.times do |n|
             state_db.push_update(entry.uniqueIdentifier)
          end
       end
-      puts "Thread #{my_id} exiting."
+      puts "Thread #{my_id} exiting." if $options.debug
       Thread.exit
    end
 end
@@ -528,7 +528,7 @@ end
 workers.each { |w| w.join }
 workers = []
 
-print "After worker threads have exited, processing leftovers..."
+print "After worker threads have exited, processing leftovers..." if $options.debug
 
 # do the remaining entries that were left over as a result of uneven workloads
 leftovers_start = $options.threads * $chunk_size
@@ -538,18 +538,18 @@ puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftove
 (leftovers_start..leftovers_end).each do |index|
    workers[index] = Thread.new do
       my_id = index
-      puts "Thread #{Thread.current} ID: #{my_id}"
+      puts "Thread #{Thread.current} ID: #{my_id}" if $options.debug
       entry = $queue[index]
       #	 puts "Entry: #{entry.inspect} #{entry.class}"
       if create_and_update_user(apps, entry, config)
          state_db.push_update(entry.uniqueIdentifier)
       end
-      puts "Thread #{my_id} exiting."
+      puts "Thread #{my_id} exiting." if $options.debug
       Thread.exit
    end
 end
 workers.each {|w| w.join if ! w.nil? }
-print "done.\n"
+print "done.\n" if $options.debug
 
 # Stop the state_db from updating itself
 state_db.stop
