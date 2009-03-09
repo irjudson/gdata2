@@ -534,7 +534,7 @@ print "After worker threads have exited, processing leftovers..."
 leftovers_start = $options.threads * $chunk_size
 left_overs_length = $queue.length - leftovers_start
 puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
-(leftovers_start..$queue.length).each do |index|
+(leftovers_start..()$queue.length-1)).each do |index|
     entry = $queue[index]
     #	 puts "Entry: #{entry.inspect} #{entry.class}"
     if create_and_update_user(apps, entry, config)
