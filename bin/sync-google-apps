@@ -512,15 +512,7 @@ Thread.abort_on_exception = true
 entry = nil
 $options.threads.times do |n|
    workers << Thread.new do
-     #
-     #
-     #
-     #
-     my_chunk = $queue.select do |i| 
-       if ($queue.index(i) % $options.threads) == 0
-         i
-       end
-     end
+     my_chunk = $queue.select { |i| i if ($queue.index(i) % $options.threads) == 0 }
      puts "#{Thread.current} => #{my_chunk.length}"
      Thread.exit
       loop do
