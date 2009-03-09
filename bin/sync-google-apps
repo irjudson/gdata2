@@ -504,19 +504,15 @@ workers = []
 # Exit if an exception occurs in a thread.
 Thread.abort_on_exception = true
 
-# Push on a terminal value for each thread
-#$options.threads.times do |n|
-#   $queue.push("terminate")
-#end
+$chunk_size = $queue.length / $options.threads
 
-entry = nil
 $options.threads.times do |n|
    workers << Thread.new do
+     my_id = workers.index(Thread.current)
+     puts "Thread #{Thread.current} ID: #{my_id}"
      # Take work out of global queue
      my_chunk = $queue.select { |i| i if ($queue.index(i) % $options.threads) == 0 }
      # Set global queue to nil where we took the work out
-     $queue.map!{|i| nil if ($queue.index(i) % $options.threads) == 0 }
-     left_overs = $queue.select { |i| i if !i.nil? }
      puts "#{Thread.current} => #{my_chunk.length} / Leftovers: #{left_overs.length}"
      Thread.exit
       while my_chunk.length > 0
@@ -535,6 +531,9 @@ end
 workers.each { |w| w.join }
 
 # do the remaining entries that were left over as a result of uneven workloads
+$queue.map!{|i| nil if ($queue.index(i) % $options.threads) == 0 }
+left_overs = $queue.select { |i| i if !i.nil? }
+puts "#{left_overs.length}"
 
 # Stop the state_db from updating itself
 state_db.stop
