@@ -518,7 +518,7 @@ $options.threads.times do |n|
      #
      my_chunk = $queue.select do |i| 
        if ($queue.index(i) % $options.threads) == 0
-         $queue[i]
+         i
        end
      end
      puts "#{Thread.current} => #{my_chunk.length}"
