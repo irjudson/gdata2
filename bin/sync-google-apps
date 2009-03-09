@@ -17,7 +17,6 @@ require 'gdata/apps'
 require 'timestamp'
 
 $options = OpenStruct.new
-#$queue = Queue.new
 $queue = Array.new
 $sync = Mutex.new
 $source = nil
@@ -533,9 +532,10 @@ print "After worker threads have exited, processing leftovers..."
 
 # do the remaining entries that were left over as a result of uneven workloads
 leftovers_start = $options.threads * $chunk_size
-left_overs_length = $queue.length - leftovers_start
-puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
-(leftovers_start..($queue.length-1)).each do |index|
+leftovers_end = $queue.length - 1
+left_overs_length = leftovers_end - leftovers_start
+puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftovers_end}"
+(leftovers_start..leftovers_end).each do |index|
    workers[index] = Thread.new do
       my_id = index
       entry = $queue[index]
