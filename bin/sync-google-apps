@@ -538,11 +538,14 @@ puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftove
 (leftovers_start..leftovers_end).each do |index|
    workers[index] = Thread.new do
       my_id = index
+      puts "Thread #{Thread.current} ID: #{my_id}"
       entry = $queue[index]
       #	 puts "Entry: #{entry.inspect} #{entry.class}"
       if create_and_update_user(apps, entry, config)
          state_db.push_update(entry.uniqueIdentifier)
       end
+      puts "Thread #{my_id} exiting."
+      Thread.exit
    end
 end
 workers.each {|w| w.join if ! w.nil? }
