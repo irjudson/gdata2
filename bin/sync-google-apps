@@ -262,7 +262,7 @@ def create_and_update_user(apps, entry, config)
       entry.montanaEduPersonClassicRoles.each do |role|
          if role =~ /_s/
             domain = address_list[role[0..2]]
-            forward = "#{uid_alias.}@#{domain}"
+            forward = "#{uid_alias}@#{domain}"
 
             # Set the forward if we are doing that
             backoff_factor = 2
