@@ -511,7 +511,7 @@ $options.threads.times do |n|
      my_id = n
      # Take work out of global queue
      my_start = my_id * $chunk_size
-     my_end = my_start + $chunk_size
+     my_end = (my_start + $chunk_size) - 1
      puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
      # Set global queue to nil where we took the work out
      Thread.exit
@@ -531,9 +531,8 @@ end
 workers.each { |w| w.join }
 
 # do the remaining entries that were left over as a result of uneven workloads
-$queue.map!{|i| nil if ($queue.index(i) % $options.threads) == 0 }
-left_overs = $queue.select { |i| i if !i.nil? }
-puts "#{left_overs.length}"
+leftovers_start = ($options.threads - 1) * $chunk_size
+puts "#{left_overs.length} Start: #{leftovers_start} Stop: #{$queue.length}"
 
 # Stop the state_db from updating itself
 state_db.stop
