@@ -515,7 +515,7 @@ $options.threads.times do |n|
      # Take work out of global queue
      my_chunk = $queue.select { |i| i if ($queue.index(i) % $options.threads) == 0 }
      # Set global queue to nil where we took the work out
-     $queue.map!{|i| nil if ($queue.index(i) % options.threads) == 0 }
+     $queue.map!{|i| nil if ($queue.index(i) % $options.threads) == 0 }
      left_overs = $queue.select { |i| i if !i.nil? }
      puts "#{Thread.current} => #{my_chunk.length} / Leftovers: #{left_overs.length}"
      Thread.exit
