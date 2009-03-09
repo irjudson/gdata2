@@ -531,9 +531,9 @@ end
 workers.each { |w| w.join }
 
 # do the remaining entries that were left over as a result of uneven workloads
-leftovers_start = ($options.threads - 1) * $chunk_size
+leftovers_start = $options.threads * $chunk_size
 left_overs_length = $queue.length - leftovers_start
-puts "#{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
+puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
 
 # Stop the state_db from updating itself
 state_db.stop
