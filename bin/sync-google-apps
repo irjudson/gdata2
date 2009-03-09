@@ -512,15 +512,12 @@ $options.threads.times do |n|
      # Take work out of global queue
      my_start = my_id * $chunk_size
      my_end = (my_start + $chunk_size) - 1
-     puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
-     # Set global queue to nil where we took the work out
-     Thread.exit
-      while my_chunk.length > 0
-         entry = my_chunk.pop
-#	 puts "Entry: #{entry.inspect} #{entry.class}"
+#     puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}"
+     (my_start..my_end).each do |index|
+         entry = $queue[index]
+         #	 puts "Entry: #{entry.inspect} #{entry.class}"
 	       if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
-            $queue
          end
       end
       Thread.exit
@@ -534,6 +531,13 @@ workers.each { |w| w.join }
 leftovers_start = $options.threads * $chunk_size
 left_overs_length = $queue.length - leftovers_start
 puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
+(leftovers_start..$queue.length).each do |index|
+    entry = $queue[index]
+    #	 puts "Entry: #{entry.inspect} #{entry.class}"
+    if create_and_update_user(apps, entry, config)
+       state_db.push_update(entry.uniqueIdentifier)
+    end
+ end
 
 # Stop the state_db from updating itself
 state_db.stop
