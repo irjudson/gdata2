@@ -512,16 +512,19 @@ Thread.abort_on_exception = true
 entry = nil
 $options.threads.times do |n|
    workers << Thread.new do
+     # Take work out of global queue
      my_chunk = $queue.select { |i| i if ($queue.index(i) % $options.threads) == 0 }
-     puts "#{Thread.current} => #{my_chunk.length}"
+     # Set global queue to nil where we took the work out
+     $queue.map!{|i| nil if ($queue.index(i) % options.threads) == 0 }
+     left_overs = $queue.select { |i| i if !i.nil? }
+     puts "#{Thread.current} => #{my_chunk.length} / Leftovers: #{left_overs.length}"
      Thread.exit
-      loop do
-         entry = $queue.pop
+      while my_chunk.length > 0
+         entry = my_chunk.pop
 #	 puts "Entry: #{entry.inspect} #{entry.class}"
-	 if entry.class.to_s != "Net::LDAP::Entry"
-	    break
-	 elsif create_and_update_user(apps, entry, config)
+	       if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
+            $queue
          end
       end
       Thread.exit
@@ -530,6 +533,8 @@ end
 
 # Wait for workers to finish
 workers.each { |w| w.join }
+
+# do the remaining entries that were left over as a result of uneven workloads
 
 # Stop the state_db from updating itself
 state_db.stop
