@@ -527,6 +527,7 @@ end
 
 # Wait for workers to finish
 workers.each { |w| w.join }
+workers = []
 
 print "After worker threads have exited, processing leftovers..."
 
@@ -535,12 +536,17 @@ leftovers_start = $options.threads * $chunk_size
 left_overs_length = $queue.length - leftovers_start
 puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{$queue.length}"
 (leftovers_start..($queue.length-1)).each do |index|
-    entry = $queue[index]
-    #	 puts "Entry: #{entry.inspect} #{entry.class}"
-    if create_and_update_user(apps, entry, config)
-       state_db.push_update(entry.uniqueIdentifier)
+    workers[index] = Thread.new do
+      my_id = index
+      entry = $queue[index]
+      #	 puts "Entry: #{entry.inspect} #{entry.class}"
+      if create_and_update_user(apps, entry, config)
+        state_db.push_update(entry.uniqueIdentifier)
+      end
     end
  end
+end
+workers.each {|w| w.join }
 print "done.\n"
 
 # Stop the state_db from updating itself
