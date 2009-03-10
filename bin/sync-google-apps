@@ -462,7 +462,7 @@ end
 # Pull attributes from the directory for users that have been modified since last run
 # Pull data from source
 attributes = config["attributes"].values
-filter_string = "(&#{config['source']['filter']}(modifytimestamp#{$options.operator}#{ts}))"
+filter_string = "(&#{config['source']['filter']}(createTimestamp#{$options.operator}#{ts}))"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
@@ -514,7 +514,7 @@ $options.threads.times do |n|
       puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
       (my_start..my_end).each do |index|
          entry = $queue[index]
-         #	 puts "Entry: #{entry.inspect} #{entry.class}"
+         #       puts "Entry: #{entry.inspect} #{entry.class}"
          if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
@@ -540,7 +540,7 @@ puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftove
       my_id = index
       puts "Thread #{Thread.current} ID: #{my_id}" if $options.debug
       entry = $queue[index]
-      #	 puts "Entry: #{entry.inspect} #{entry.class}"
+      #  puts "Entry: #{entry.inspect} #{entry.class}"
       if create_and_update_user(apps, entry, config)
          state_db.push_update(entry.uniqueIdentifier)
       end
