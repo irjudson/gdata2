@@ -470,6 +470,7 @@ end
 
 # Pull attributes from the directory for users that have been modified since last run
 # Pull data from source
+# Deal with Administrative Users
 attributes = config["attributes"].values
 admin_filter = ""
 if config['source'].has_key?('admins')
@@ -477,10 +478,19 @@ if config['source'].has_key?('admins')
     admin_filter += "(uid=#{n})"
   end
 end
-filter_string = "(|(&(createTimestamp#{$options.operator}#{ts})#{config['source']['filter']})#{admin_filter})"
+# Deal with Administrative Users
+attributes = config["attributes"].values
+extra_filter = ""
+if config['source'].has_key?('extras')
+  config['source']['extras'].each do |n|
+    extra_filter += "(uid=#{n})"
+  end
+end
+filter_string = "(|(&(createTimestamp#{$options.operator}#{ts})#{config['source']['filter']})#{admin_filter}#{extra_filter})"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
+exit
 
 puts "There are #{accounts.length} users in the source directory."
 puts "There are #{state_db.count_users} users in the state database."
