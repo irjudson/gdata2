@@ -490,7 +490,6 @@ filter_string = "(|(&(createTimestamp#{$options.operator}#{ts})#{config['source'
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
-exit
 
 puts "There are #{accounts.length} users in the source directory."
 puts "There are #{state_db.count_users} users in the state database."
