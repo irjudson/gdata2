@@ -562,4 +562,4 @@ state_db.stop
 
 # Update our local timestamp
 state_db.update_timestamp if not $options.reset
-stat_db.close
+state_db.close
