@@ -215,7 +215,12 @@ def create_and_update_user(apps, entry, config)
       begin
          # update so they don't have to change their password at next login
          puts "    Setting password reset to false for |#{username}|." if $options.verbose
-         result = apps.provision.update_user(username, first, last, nil, nil, nil, nil, "false", nil )
+         if config['source']['admins'].include?(nickname)
+           admin = true
+         else
+           admin = false
+         end
+         result = apps.provision.update_user(username, first, last, nil, nil, admin, nil, "false", nil )
          puts "Result: #{result}" if $options.debug
       rescue Timeout::Error
          retry
@@ -466,7 +471,14 @@ end
 # Pull attributes from the directory for users that have been modified since last run
 # Pull data from source
 attributes = config["attributes"].values
-filter_string = "(&#{config['source']['filter']}(createTimestamp#{$options.operator}#{ts}))"
+admin_filter = ""
+if config['source'].has_key?('admins')
+  config['source']['admins'].each do |n|
+    admin_filter += "(uid=#{n})"
+  end
+  admin_filter = "(|#{admin_filter})"
+end
+filter_string = "(&#{config['source']['filter']}(createTimestamp#{$options.operator}#{ts})#{admin_filter})"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
