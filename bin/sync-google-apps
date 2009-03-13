@@ -144,6 +144,10 @@ class State
    def stop
       @running = false
    end
+   
+   def close
+     @db.close
+   end
 end
 
 def random_password(size = 12)
@@ -558,3 +562,4 @@ state_db.stop
 
 # Update our local timestamp
 state_db.update_timestamp if not $options.reset
+stat_db.close
