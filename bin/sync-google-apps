@@ -476,9 +476,8 @@ if config['source'].has_key?('admins')
   config['source']['admins'].each do |n|
     admin_filter += "(uid=#{n})"
   end
-  admin_filter = "(|#{admin_filter})"
 end
-filter_string = "(&#{config['source']['filter']}(createTimestamp#{$options.operator}#{ts})#{admin_filter})"
+filter_string = "(&(createTimestamp#{$options.operator}#{ts})(|#{config['source']['filter']})(#{admin_filter}))"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
