@@ -534,22 +534,24 @@ print "After worker threads have exited, processing leftovers..." if $options.de
 leftovers_start = $options.threads * $chunk_size
 leftovers_end = $queue.length - 1
 left_overs_length = leftovers_end - leftovers_start
-puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftovers_end}"
-(leftovers_start..leftovers_end).each do |index|
-   workers[index] = Thread.new do
-      my_id = index
-      puts "Thread #{Thread.current} ID: #{my_id}" if $options.debug
-      entry = $queue[index]
-      #  puts "Entry: #{entry.inspect} #{entry.class}"
-      if create_and_update_user(apps, entry, config)
-         state_db.push_update(entry.uniqueIdentifier)
-      end
-      puts "Thread #{my_id} exiting." if $options.debug
-      Thread.exit
-   end
+if left_overs_length > 0
+  puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftovers_end}"
+  (leftovers_start..leftovers_end).each do |index|
+     workers[index] = Thread.new do
+        my_id = index
+        puts "Thread #{Thread.current} ID: #{my_id}" if $options.debug
+        entry = $queue[index]
+        #  puts "Entry: #{entry.inspect} #{entry.class}"
+        if create_and_update_user(apps, entry, config)
+           state_db.push_update(entry.uniqueIdentifier)
+        end
+        puts "Thread #{my_id} exiting." if $options.debug
+        Thread.exit
+     end
+  end
+  workers.each {|w| w.join if ! w.nil? }
+  print "done.\n" if $options.debug
 end
-workers.each {|w| w.join if ! w.nil? }
-print "done.\n" if $options.debug
 
 # Stop the state_db from updating itself
 state_db.stop
