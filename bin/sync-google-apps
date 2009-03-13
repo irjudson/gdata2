@@ -220,7 +220,7 @@ def create_and_update_user(apps, entry, config)
          else
            admin = false
          end
-         result = apps.provision.update_user(username, first, last, nil, nil, admin, nil, "false", nil )
+         result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
          puts "Result: #{result}" if $options.debug
       rescue Timeout::Error
          retry
