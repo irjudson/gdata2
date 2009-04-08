@@ -129,7 +129,7 @@ class State
    def check(entry, source_stamp)
       source = Time.parse(source_stamp[0])
       ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")[0]
-      if ts.nil? || source < @timestamp
+      if ts.nil? || source < ts
          puts "Check -> Entry old, returning true" if $options.verbose
          return true
       else
