@@ -99,16 +99,7 @@ module GData #:nodoc:
           msg = "error code : "+gdata_error.code+", invalid input : "+gdata_error.input+", reason : "+gdata_error.reason
           raise gdata_error, msg
         end
-        
-        if response.code == "1300"
-          gdata_error = GDataError.new
-          gdata_error.code = "1300"
-          gdata_error.input = "-"
-          gdata_error.reason = "Entity Exists"
-          msg = "error code : "+gdata_error.code+", reason : "+gdata_error.reason
-          raise gdata_error, msg
-        end
-        
+
         xml = Document.new(response.body)
 
         error = xml.elements["AppsForYourDomainErrors/error"]
