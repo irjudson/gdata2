@@ -47,9 +47,9 @@ module GData #:nodoc:
 
       return resp
     end
+  end
 
-    class GDataError < RuntimeError
-      attr_accessor :code, :input, :reason
-    end
+  class GDataError < RuntimeError
+    attr_accessor :code, :input, :reason
   end
 end
