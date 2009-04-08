@@ -488,7 +488,7 @@ if config['source'].has_key?('extras')
     extra_filter += "(uid=#{n})"
   end
 end
-filter_string = "(|(&(createTimestamp#{$options.operator}#{ts})#{config['source']['filter']})#{admin_filter}#{extra_filter})"
+filter_string = "(|#{config['source']['filter']}#{admin_filter}#{extra_filter})"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
