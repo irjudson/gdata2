@@ -185,7 +185,7 @@ def create_and_update_user(apps, entry, config)
    begin
      result = apps.provision.create_user(username, first, last, password)
      puts "Result: #{result}" if $options.debug
-   rescue GDataError => e
+   rescue GData::GDataError => e
      if e.code != "1300"
        puts "Error creating user: #{username}"
        raise e
@@ -202,7 +202,7 @@ def create_and_update_user(apps, entry, config)
    begin
      result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
      puts "Result: #{result}" if $options.debug
-   rescue GDataError => e
+   rescue GData::GDataError => e
      if e.code != "1300"
        puts "Error creating user: #{username}"
        raise e
@@ -215,7 +215,7 @@ def create_and_update_user(apps, entry, config)
        puts "    Adding alias |#{nickname}| to |#{username}|." if $options.verbose
        result = apps.provision.create_nickname(username, nickname)
        puts "Result: #{result}" if $options.debug
-     rescue GDataError => e
+     rescue GData::GDataError => e
        if e.code != "1300"
          puts "Error creating user: #{username}"
          raise e
@@ -235,7 +235,7 @@ def create_and_update_user(apps, entry, config)
          puts "    Adding mailforward |#{forward}| to |#{username}|." if $options.verbose
          result = apps.mail.update_forward(username, forward)
          puts "Result: #{result}" if $options.debug
-       rescue GDataError => e
+       rescue GData::GDataError => e
          if e.code != "1300"
            puts "Error creating user: #{username}"
            raise e
@@ -252,7 +252,7 @@ def create_and_update_user(apps, entry, config)
        puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
        result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
        puts "Result: #{result}" if $options.debug
-     rescue GDataError => e
+     rescue GData::GDataError => e
        if e.code != "1300"
          puts "Error creating user: #{username}"
          raise e
