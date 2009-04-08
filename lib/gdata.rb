@@ -23,12 +23,28 @@ module GData #:nodoc:
 
       # Performs the http request and returns the http response
       def perform(method, path, body=nil, header=nil)
-         req = Net::HTTPGenericRequest.new(method, !body.nil?, true, path)
-         req['Content-Type'] = header['Content-Type'] if header['Content-Type']
-         req['Authorization'] = header['Authorization'] if header['Authorization']
-         req['Content-length'] = body.length.to_s if body
-         resp = @http_connection.request(req, body)
-         return resp
+        backoff_factor = 2
+        resp = nil
+        while resp.nil?
+           begin
+             req = Net::HTTPGenericRequest.new(method, !body.nil?, true, path)
+             req['Content-Type'] = header['Content-Type'] if header['Content-Type']
+             req['Authorization'] = header['Authorization'] if header['Authorization']
+             req['Content-length'] = body.length.to_s if body
+             resp = @http_connection.request(req, body)
+           rescue Timeout::Error
+              retry
+           rescue GData::GDataError => e
+              if e.code == "503"
+                 resp = nil
+                 sleep(backoff_factor)
+                 backoff_factor *= backoff_factor
+               else
+                 return e
+              end
+           end
+
+        return resp
       end
    end
 

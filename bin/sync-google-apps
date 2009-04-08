@@ -180,86 +180,26 @@ def create_and_update_user(apps, entry, config)
    nickname = uid_alias
    update = false
 
-   # First create them
-   backoff_factor = 2
-   result = nil
-   while result.nil?
-      begin
-         # create user
-         puts "#{$count} Creating user #{username}." if $options.verbose
-         result = apps.provision.create_user(username, first, last, password)
-         puts "Result: #{result}" if $options.debug
-      rescue Timeout::Error
-         retry
-      rescue GData::GDataError => e
-         puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-         if e.code == "503"
-            result = nil
-            sleep(backoff_factor)
-            backoff_factor *= backoff_factor
-         elsif e.code = "1300"
-            puts "...Exists" if $options.debug
-            update = true
-            break
-         end
-      end
-   end
+   # create user
+   puts "#{$count} Creating user #{username}." if $options.verbose
+   result = apps.provision.create_user(username, first, last, password)
+   puts "Result: #{result}" if $options.debug
 
-   # Then set the password reset to false so they don't have to change it at next login
-   backoff_factor = 2
-   result = nil
-   while result.nil?
-      begin
-         # update so they don't have to change their password at next login
-         puts "    Setting password reset to false for |#{username}|." if $options.verbose
-         if config['source']['admins'].include?(nickname)
-           admin = true
-         else
-           admin = false
-         end
-         result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
-         puts "Result: #{result}" if $options.debug
-      rescue Timeout::Error
-         retry
-      rescue GData::GDataError => e
-         puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.verbose
-         if e.code == "503"
-            result = nil
-            sleep(backoff_factor)
-            backoff_factor *= backoff_factor
-         elsif e.code = "1300"
-            puts "...Exists" if $options.debug
-            update = true
-            break
-         end
-      end
+   # update so they don't have to change their password at next login
+   puts "    Setting password reset to false for |#{username}|." if $options.verbose
+   if config['source']['admins'].include?(nickname)
+     admin = true
+   else
+     admin = false
    end
+   result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
+   puts "Result: #{result}" if $options.debug
 
    if uid_dn != uid_alias
-      # Finally add the email address they know about
-      backoff_factor = 2
-      result = nil
-      while result.nil?
-         begin
-            # Add the email address they're used to seeing
-            puts "    Adding alias |#{nickname}| to |#{username}|." if $options.verbose
-            result = apps.provision.create_nickname(username, nickname)
-            puts "Result: #{result}" if $options.debug
-         rescue Timeout::Error
-            retry
-         rescue GData::GDataError => e
-            puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-            if e.code == "503"
-               result = nil
-               sleep(backoff_factor)
-               backoff_factor *= backoff_factor
-            elsif e.code = "1300"
-               puts "...Exists" if $options.debug
-               update = true
-               break
-            end
-         end
-      end
+      # Add the email address they're used to seeing
+      puts "    Adding alias |#{nickname}| to |#{username}|." if $options.verbose
+      result = apps.provision.create_nickname(username, nickname)
+      puts "Result: #{result}" if $options.debug
    end
 
    if $options.forward
@@ -269,61 +209,20 @@ def create_and_update_user(apps, entry, config)
        elsif role[3,1] == "e"
          forward = entry.mail
        end
-
-       # Set the forward if we are doing that
-       backoff_factor = 2
-       result = nil
-       while result.nil?
-         begin
-           # Add the email address they're used to seeing
-           puts "    Adding mailforward |#{forward}| to |#{username}|." if $options.verbose
-           result = apps.mail.update_forward(username, forward)
-           puts "Result: #{result}" if $options.debug
-         rescue Timeout::Error
-           retry
-         rescue GData::GDataError => e
-           puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-           if e.code == "503"
-             result = nil
-             sleep(backoff_factor)
-             backoff_factor *= backoff_factor
-           elsif e.code = "1300"
-             puts "...Exists" if $options.debug
-             update = true
-             break
-           end
-         end
-       end
-      end
+       # Add the email address they're used to seeing
+       puts "    Adding mailforward |#{forward}| to |#{username}|." if $options.verbose
+       result = apps.mail.update_forward(username, forward)
+       puts "Result: #{result}" if $options.debug
+     end
    end
 
    if config['apps']['domain'] != config['apps']['maildomain']
-      # This means we need a send_as alias
-      backoff_factor = 2
-      result = nil
       send_as_name = "#{first} #{last}"
       send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
-      while result.nil?
-         begin
-            # Add the email address they're used to seeing
-            puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
-            result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
-            puts "Result: #{result}" if $options.debug
-         rescue Timeout::Error
-            retry
-         rescue GData::GDataError => e
-            puts "errorcode = " +e.code+ " input : "+e.input+" reason : "+e.reason if $options.debug
-            if e.code == "503"
-               result = nil
-               sleep(backoff_factor)
-               backoff_factor *= backoff_factor
-            elsif e.code = "1300"
-               puts "...Exists" if $options.debug
-               update = true
-               break
-            end
-         end
-      end
+      # Add the email address they're used to seeing
+      puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
+      result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+      puts "Result: #{result}" if $options.debug
    end
 
    $sync.synchronize {

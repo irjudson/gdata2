@@ -97,7 +97,16 @@ module GData #:nodoc:
           gdata_error.reason = "Apps API invoked too rapidly."
           msg = "error code : "+gdata_error.code+", invalid input : "+gdata_error.input+", reason : "+gdata_error.reason
           raise gdata_error, msg
-        end          
+        end
+        
+        if response.code == "1300"
+          gdata_error = GDataError.new
+            gdata_error.code = "1300"
+            gdata_error.input = "-"
+            gdata_error.reason = "Entity Exists"
+            msg = "error code : "+gdata_error.code+", reason : "+gdata_error.reason
+            raise gdata_error, msg
+          end
         
         xml = Document.new(response.body)
 
