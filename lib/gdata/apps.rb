@@ -4,6 +4,7 @@ $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname
 require 'cgi'
 require 'thread'
 
+require 'gdata'
 require 'gdata/apps/provisioning'
 require 'gdata/apps/email'
 
@@ -101,12 +102,12 @@ module GData #:nodoc:
         
         if response.code == "1300"
           gdata_error = GDataError.new
-            gdata_error.code = "1300"
-            gdata_error.input = "-"
-            gdata_error.reason = "Entity Exists"
-            msg = "error code : "+gdata_error.code+", reason : "+gdata_error.reason
-            raise gdata_error, msg
-          end
+          gdata_error.code = "1300"
+          gdata_error.input = "-"
+          gdata_error.reason = "Entity Exists"
+          msg = "error code : "+gdata_error.code+", reason : "+gdata_error.reason
+          raise gdata_error, msg
+        end
         
         xml = Document.new(response.body)
 
