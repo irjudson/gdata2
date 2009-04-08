@@ -21,6 +21,7 @@ $queue = Array.new
 $sync = Mutex.new
 $source = nil
 $count = 0
+$all_count = 0
 $forward_domains = Hash.new
 
 class State
@@ -129,7 +130,7 @@ class State
    def check(entry, source_stamp)
       source = Time.parse(source_stamp[0])
       ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")[0]
-      if ts.nil? || ts < @timestamp
+      if ts.nil? || source < @timestamp
          puts "Check -> Entry old, returning true" if $options.verbose
          return true
       else
@@ -330,7 +331,7 @@ def create_and_update_user(apps, entry, config)
       $count += 1
    }
    if (($count % 100) == 0)
-      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
+      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count} / #{$all_count}"
    end
    return update
 end
@@ -535,6 +536,7 @@ $options.threads.times do |n|
       my_end = (my_start + $chunk_size) - 1
       puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
       (my_start..my_end).each do |index|
+         $all_count += 1
          entry = $queue[index]
          #       puts "Entry: #{entry.inspect} #{entry.class}"
          if create_and_update_user(apps, entry, config)
