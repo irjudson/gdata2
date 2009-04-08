@@ -21,7 +21,6 @@ $queue = Array.new
 $sync = Mutex.new
 $source = nil
 $count = 0
-$all_count = 0
 $forward_domains = Hash.new
 
 class State
@@ -331,7 +330,7 @@ def create_and_update_user(apps, entry, config)
       $count += 1
    }
    if (($count % 100) == 0)
-      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count} / #{$all_count}"
+      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
    end
    return update
 end
@@ -536,7 +535,6 @@ $options.threads.times do |n|
       my_end = (my_start + $chunk_size) - 1
       puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
       (my_start..my_end).each do |index|
-         $all_count += 1
          entry = $queue[index]
          #       puts "Entry: #{entry.inspect} #{entry.class}"
          if create_and_update_user(apps, entry, config)
