@@ -21,6 +21,7 @@ $queue = Array.new
 $sync = Mutex.new
 $source = nil
 $count = 0
+$forward_domains = Hash.new
 
 class State
    attr_reader :timestamp
@@ -266,10 +267,9 @@ def create_and_update_user(apps, entry, config)
    end
 
    if $options.forward
-      address_list = config['forwards']
       entry.montanaEduPersonClassicRoles.each do |role|
-         if role =~ /_s/
-            domain = address_list[role[0..2]]
+         if $forward_domains.has_key?(role[0..3])
+            domain = address_list[role[0..3]]
             forward = "#{username}@#{domain}"
 
             # Set the forward if we are doing that
@@ -437,6 +437,7 @@ end.parse!
 config = YAML.load_file($options.config)
 if config.has_key?('forwards')
    $options.forward = true
+   $forward_domains = config['forwards']
 end
 
 # Create a source object to pull data from
