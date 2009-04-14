@@ -42,6 +42,9 @@ module GData #:nodoc:
           else
             return e
           end
+	rescue Errno::EPIPE
+	  retry
+	rescue EOFError
         end
       end
 
