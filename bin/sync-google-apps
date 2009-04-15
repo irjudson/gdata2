@@ -46,7 +46,8 @@ class State
       if needs_initialization
          do_initialization
       else
-         @timestamp = @db.execute("SELECT * FROM updates;")[0]
+         @db.execute("SELECT * FROM updates;") do |@timestamp|
+	 end
       end
    end
 
@@ -64,8 +65,9 @@ class State
    end
 
    def show_users
-      ts = @db.execute("SELECT * FROM updates;")[0]
-      puts "Last touched: #{ts}"
+      @db.execute("SELECT * FROM updates;") do |ts|
+          puts "Last touched: #{ts}"
+      end
 
       puts "Dumping users:"
       @db.execute("SELECT * FROM users;") do |user|
@@ -81,61 +83,69 @@ class State
    end
 
    def count_users
-      @db.execute("SELECT count(*) FROM users;")
+      result = 0
+      @db.execute("SELECT count(*) FROM users;") do |result|
+          return result
+      end
    end
 
    def exists?(entry)
-      ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")
-      if ts.length == 1
-         return true
-      elsif ts.length > 1
-         puts "More than one user found for id #{entry}"
-      else
-         return false
+      @db.execute("SELECT last_modified FROM users WHERE idx='?'", entry) do |ts|
+#          puts "exists? TS: #{ts}"
+          if ts.length == 1
+             return true
+          elsif ts.length > 1
+             puts "More than one user found for id #{entry}"
+          else
+             return false
+          end
       end
    end
 
    def push_update(entry)
-      @updates << { entry => Time.now.gmtime.strftime("%Y%m%d%H%M00Z") }
+      @updates << [ entry, Time.now.gmtime.strftime("%Y%m%d%H%M00Z") ]
    end
 
    def process_updates
       @updater = Thread.new do
          puts "Creating process update thread." if $options.debug
          while @running || ! @updates.empty?
-            puts "Processing state update" if $options.debug
-            entry,ts = @updates.pop
-            update(entry,ts)
+	       puts "==> Processing state update [#{@updates.length} left]" if $options.verbose
+	       entry,ts = @updates.pop
+               update(entry,ts)
          end
       end
    end
 
    def update(entry, ts=nil)
       ts ||= Time.now.gmtime.strftime("%Y%m%d%H%M00Z")
-
       begin
-         if exists?(entry)
-            puts "Updating #{entry} with TS: #{ts}" if $options.debug
-            @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}';")
-         else
+         if ! exists?(entry)
             puts "Inserting #{entry} with TS: #{ts}" if $options.debug
-            @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}');")
+            @db.execute("INSERT INTO users (idx, last_modified) VALUES ('#{entry}', '#{ts}')")
+         else
+            puts "Updating #{entry} with TS: #{ts}" if $options.debug
+            @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}'")
          end
       rescue SQLite3::SQLException => e
-
       end
    end
 
    def check(entry, source_stamp)
       source = Time.parse(source_stamp[0])
-      ts = @db.execute("SELECT last_modified FROM users WHERE 'idx=#{entry}';")[0]
-      if ts.nil? || source < ts
-         puts "Check -> Entry old, returning true" if $options.verbose
-         return true
-      else
-         puts "Check -> Entry up to date, returning false" if $options.verbose
-         return false
+      @db.execute("SELECT last_modified FROM users WHERE idx='#{entry}'") do |ts|
+          now = Time.parse(ts.to_s)
+#          puts "TS: #{now} < SS: #{source} = #{now < source}"
+
+          if now < source 
+             puts "Check -> Entry old, returning true" if $options.verbose
+             return true
+          else
+             puts "Check -> Entry up to date, returning false" if $options.verbose
+             return false
+          end
       end
+      return true
    end
 
    def stop
@@ -185,11 +195,20 @@ def create_and_update_user(apps, entry, config)
    begin
      result = apps.provision.create_user(username, first, last, password)
      puts "Result: #{result}" if $options.debug
+     update = true
    rescue GData::GDataError => e
-     if e.code != "1300"
-       puts "Error creating user: #{username}"
+     if e.code == "1300"
+       puts "  => Create User #{username} exists" if $options.verbose
+       update = true
+     elsif e.code == "1000"
+       puts "  => Create User #{username} uknown error" if $options.verbose
+       retry
+     else   
+       puts "Error creating user: #{username}" if $options.verbose
        raise e
      end
+   rescue OpenSSL::SSL::SSLError => e
+     retry
    end
 
    # update so they don't have to change their password at next login
@@ -202,11 +221,20 @@ def create_and_update_user(apps, entry, config)
    begin
      result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
      puts "Result: #{result}" if $options.debug
+     update = true
    rescue GData::GDataError => e
-     if e.code != "1300"
-       puts "Error creating user: #{username}"
+     if e.code == "1300"
+       puts "  => Set password reset to falise #{username} exists" if $options.verbose
+       update = true
+     elsif e.code == "1000"
+       puts "  => setting password reset to false  #{username} uknown error" if $options.verbose
+       retry
+     else   
+       puts "Error creating user: #{username}" if $options.verbose
        raise e
      end
+   rescue OpenSSL::SSL::SSLError => e
+     retry
    end
 
    if uid_dn != uid_alias
@@ -215,11 +243,20 @@ def create_and_update_user(apps, entry, config)
        puts "    Adding alias |#{nickname}| to |#{username}|." if $options.verbose
        result = apps.provision.create_nickname(username, nickname)
        puts "Result: #{result}" if $options.debug
+       update = true
      rescue GData::GDataError => e
-       if e.code != "1300"
-         puts "Error creating user: #{username}"
+       if e.code == "1300"
+         puts "  => adding alias #{nickname} to  #{username} exists" if $options.verbose
+         update = true
+       elsif e.code == "1000"
+         puts "  => adding alias #{nickname} to  #{username} uknown error" if $options.verbose
+         retry
+       else   
+         puts "Error creating user: #{username}" if $options.verbose
          raise e
        end
+     rescue OpenSSL::SSL::SSLError => e
+       retry
      end
    end
 
@@ -235,11 +272,20 @@ def create_and_update_user(apps, entry, config)
          puts "    Adding mailforward |#{forward}| to |#{username}|." if $options.verbose
          result = apps.mail.update_forward(username, forward)
          puts "Result: #{result}" if $options.debug
+         update = true
        rescue GData::GDataError => e
-         if e.code != "1300"
-           puts "Error creating user: #{username}"
+         if e.code == "1300"
+	   puts "  => adding mailforward #{forward} to  #{username} exists" if $options.verbose
+           update = true
+	 elsif e.code == "1000"
+           puts "  => adding mailforward #{forward} to  #{username} uknown error" if $options.verbose
+           retry
+       	 else   
+           puts "Error creating user: #{username}" if $options.verbose
            raise e
          end
+       rescue OpenSSL::SSL::SSLError => e
+         retry
        end
      end
    end
@@ -252,11 +298,20 @@ def create_and_update_user(apps, entry, config)
        puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
        result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
        puts "Result: #{result}" if $options.debug
+       update = true
      rescue GData::GDataError => e
-       if e.code != "1300"
-         puts "Error creating user: #{username}"
+       if e.code == "1300"
+         puts "  => creating send as alias #{send_as_name} for  #{username} exists" if $options.verbose
+         update = true
+       elsif e.code == "1000"
+         puts "  => createing sendas alias #{send_as_name} for  #{username} uknown error" if $options.verbose
+         retry
+       else   
+         puts "Error creating user: #{username}" if $options.verbose
          raise e
        end
+     rescue OpenSSL::SSL::SSLError => e
+       retry
      end
    end
 
@@ -266,6 +321,7 @@ def create_and_update_user(apps, entry, config)
    if (($count % 100) == 0)
       puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
    end
+
    return update
 end
 
@@ -419,6 +475,7 @@ if config['source'].has_key?('extras')
   end
 end
 filter_string = "(&(createTimestamp#{$options.operator}#{ts})(|#{config['source']['filter']}#{admin_filter}#{extra_filter}))"
+filter_string = "(|#{config['source']['filter']}#{admin_filter}#{extra_filter})"
 puts "Filter String: #{filter_string}" if $options.debug
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => config["source"]["base"], :filter => filter, :attributes => attributes)
@@ -442,6 +499,8 @@ accounts.each do |entry|
       end
    end
 end
+
+puts "There are #{$queue.length} users to process this time."
 
 # If the goal is a csv file, don't bother calling google api
 if not $output.nil?
@@ -470,7 +529,6 @@ $options.threads.times do |n|
       puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
       (my_start..my_end).each do |index|
          entry = $queue[index]
-         #       puts "Entry: #{entry.inspect} #{entry.class}"
          if create_and_update_user(apps, entry, config)
             state_db.push_update(entry.uniqueIdentifier)
          end
