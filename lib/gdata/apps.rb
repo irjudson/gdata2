@@ -16,7 +16,7 @@ module GData #:nodoc:
       # authentication token, valid up to 24 hours after the last connection
       attr_reader :token, :domain
       attr_reader :provision, :mail
-      
+
       # Creates a new Apps object
       #
       #       user : Google Apps domain administrator username (string)
@@ -45,7 +45,7 @@ module GData #:nodoc:
          @proxy_user = proxy_user
          @proxy_passwd = proxy_passwd
          @token = login(user, passwd)
-         # Reset the connection for thread safety, it only costs one more connection creation, but 
+         # Reset the connection for thread safety, it only costs one more connection creation, but
          # it makes the token shared and things avoid ickyness.
          Thread.current[:connection] = nil
          @headers = {'Content-Type'=>'application/atom+xml', 'Authorization'=> 'GoogleLogin auth='+token}
@@ -53,10 +53,10 @@ module GData #:nodoc:
          @mail = GData::Apps::Email.new(self)
          return @connection
       end
-      
+
       def recreate_connection
       end
-      
+
       def register_action(method, action)
          if @actions.has_key?(method)
             return -1
@@ -100,7 +100,12 @@ module GData #:nodoc:
           raise gdata_error, msg
         end
 
-        xml = Document.new(response.body)
+        begin
+          xml = Document.new(response.body)
+        rescue REXML::ParseException => e
+          puts "Error processing response: ", e
+          raise
+        end
 
         error = xml.elements["AppsForYourDomainErrors/error"]
         if error
