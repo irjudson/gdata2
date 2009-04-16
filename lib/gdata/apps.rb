@@ -102,9 +102,9 @@ module GData #:nodoc:
 
         begin
           xml = Document.new(response.body)
-        rescue REXML::ParseException => e
+        rescue Exception => e
           puts "Error processing response: ", e
-          raise
+          return nil
         end
 
         error = xml.elements["AppsForYourDomainErrors/error"]
