@@ -118,8 +118,10 @@ module GData #:nodoc:
 
          def update_forward(destination, enabled=true, action="KEEP")
             self.elements["atom:entry"].add_element "apps:property", { "name" => "enable", "value" => enabled.to_s }
-            self.elements["atom:entry"].add_element "apps:property", { "name" => "forwardTo", "value" => destination }
-            self.elements["atom:entry"].add_element "apps:property", { "name" => "action", "value" => action }
+            if enabled == true
+              self.elements["atom:entry"].add_element "apps:property", { "name" => "forwardTo", "value" => destination }
+              self.elements["atom:entry"].add_element "apps:property", { "name" => "action", "value" => action }
+            end
          end
       end
    end
