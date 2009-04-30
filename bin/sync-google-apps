@@ -220,7 +220,7 @@ def create_and_update_user(apps, entry, config)
      admin = false
    end
    begin
-     result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, true, "false", nil )
+     result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
      puts "Result: #{result}" if $options.debug
      update = true
    rescue GData::GDataError => e
