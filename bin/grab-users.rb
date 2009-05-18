@@ -41,7 +41,7 @@ class State
          @db.execute("SELECT * FROM updates;") do |@timestamp|
          end
       end
-	 end
+         end
 
    def do_initialization
       puts "Initializing state database." if $options.verbose
@@ -110,10 +110,12 @@ class State
           when "gf_s", "gf_w": (fwalias = "#{uid_alias}@my.msugf.edu") && gf = 1 && google = 1
           when "hv_s", "hv_w": (fwalias = "#{uid_alias}@students.msun.edu") && hv = 1 && google = 1
           when "bz_e", "bl_e", "gf_e", "hv_e": (fwalias = get_mail(entry)) && google = 0
-          else 
+          else
             puts "Unknown role found! #{role[0..3]}" if options.verbose
         end
-        forward.push(fwalias)
+       if ! forward.include?(fwalias)
+         forward.push(fwalias)
+       end
       end
       if entry.givenName.is_a?(Array)
         first_name = entry.givenName[0]
@@ -127,7 +129,7 @@ class State
       end
       first_name.gsub!('\'', '\\\'')
       last_name.gsub!('\'', '\\\'')
-  
+
       if ! exists?(entry.uniqueIdentifier)
         begin
             puts "Inserting #{entry.dn} with TS: #{ts}" if $options.verbose
@@ -152,7 +154,7 @@ class State
       source = Time.parse(source_stamp[0])
       @db.execute("SELECT roster_modified FROM users WHERE idx='#{entry}'") do |ts|
           now = Time.parse(ts.to_s)
-          if now < source 
+          if now < source
              return true
           else
              return false
@@ -172,7 +174,7 @@ def get_mail(entry)
 
    if addr.nil? || addr.split("@")[1] == "myportal.montana.edu"
      return nil
-   else 
+   else
      return addr
    end
   end
