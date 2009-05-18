@@ -340,6 +340,14 @@ module GData #:nodoc:
             @agreed_to_terms = entry.elements["apps:login"].attributes["agreedToTerms"]
             @quota_limit = entry.elements["apps:quota"].attributes["limit"]
          end
+         
+         def to_s
+           outstr = "#<#{self.class}:0x#{self.object_id.to_s(16)}>\n"
+           instance_variables.sort.each do |v|
+             outstr += "\t#{v[1,v.length-1]} : #{instance_variable_get(v).to_s}\n"
+           end
+           outstr
+         end
       end
 
       # NicknameEntry object.
@@ -361,6 +369,11 @@ module GData #:nodoc:
             else
               @nickname = entry.elements["apps:nickname"].attributes["name"]
             end
+         end
+         
+         def to_s
+           outstr = "#<#{self.class}:0x#{self.object_id.to_s(16)}>\n"
+           outstr += "\t#{@login} : #{@nickname}"
          end
       end
 

@@ -47,13 +47,13 @@ class State
          do_initialization
       else
          @db.execute("SELECT * FROM updates;") do |@timestamp|
-	 end
+	       end
       end
    end
 
    def do_initialization
       puts "Initializing state database." if $options.verbose
-      @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT);")
+      @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, last_modified TEXT, netid TEXT, first_last TEXT, forward TEXT);")
       @db.execute("CREATE TABLE updates (ts TEXT);")
    end
 
@@ -91,7 +91,6 @@ class State
 
    def exists?(entry)
       @db.execute("SELECT last_modified FROM users WHERE idx='?'", entry) do |ts|
-#          puts "exists? TS: #{ts}"
           if ts.length == 1
              return true
           elsif ts.length > 1
@@ -110,7 +109,7 @@ class State
       @updater = Thread.new do
          puts "Creating process update thread." if $options.debug
          while @running || ! @updates.empty?
-	       puts "==> Processing state update [#{@updates.length} left]" if $options.verbose
+	       puts "==> Processing state update [#{@updates.length} left]" if $options.debug
 	       entry,ts = @updates.pop
                update(entry,ts)
          end
@@ -135,13 +134,9 @@ class State
       source = Time.parse(source_stamp[0])
       @db.execute("SELECT last_modified FROM users WHERE idx='#{entry}'") do |ts|
           now = Time.parse(ts.to_s)
-#          puts "TS: #{now} < SS: #{source} = #{now < source}"
-
           if now < source 
-#             puts "Check -> Entry old, returning true" if $options.verbose
              return true
           else
-#             puts "Check -> Entry up to date, returning false" if $options.verbose
              return false
           end
       end
@@ -225,7 +220,7 @@ def create_and_update_user(apps, entry, config)
      update = true
    rescue GData::GDataError => e
      if e.code == "1300"
-       puts "  => Set password reset to falise #{username} exists" if $options.verbose
+       puts "  => Set password reset to false #{username} exists" if $options.verbose
        update = true
      elsif e.code == "1000"
        puts "  => setting password reset to false  #{username} unknown error" if $options.verbose
