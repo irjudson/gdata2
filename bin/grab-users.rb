@@ -45,7 +45,7 @@ class State
 
    def do_initialization
       puts "Initializing state database." if $options.verbose
-      @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, created TEXT, last_modified TEXT, netid TEXT, first TEXT, last TEXT, first_last TEXT, bz TEXT, bl TEXT, gf TEXT, hv TEXT, forward TEXT, google TEXT);")
+      @db.execute("CREATE TABLE users (idx TEXT PRIMARY KEY, created TEXT, last_modified TEXT, roster_modified TEXT, netid TEXT, first TEXT, last TEXT, first_last TEXT, bz TEXT, bl TEXT, gf TEXT, hv TEXT, forward TEXT, google TEXT);")
       @db.execute("CREATE TABLE updates (ts TEXT);")
    end
 
@@ -83,6 +83,7 @@ class State
 
    def exists?(entry)
       @db.execute("SELECT last_modified FROM users WHERE idx='?'", entry) do |ts|
+        puts "Exists: #{ts.inspect} #{ts.length}"
           if ts.length == 1
              return true
           elsif ts.length > 1
@@ -126,24 +127,30 @@ class State
       end
       first_name.gsub!('\'', '\\\'')
       last_name.gsub!('\'', '\\\'')
-      begin
-         if ! exists?(entry)
+  
+      if ! exists?(entry.uniqueIdentifier)
+        begin
             puts "Inserting #{entry.dn} with TS: #{ts}" if $options.verbose
-            puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')" if $options.verbose
-            @db.execute("INSERT INTO users (idx, created, last_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')")
-         else
-            puts "Updating #{entry.dn} with TS: #{ts}" if $options.verbose
-            @db.execute("UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}'")
-         end
-      rescue SQLite3::SQLException => e
-        puts "Exception inserting data in db ", e
-        puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')"
+            puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')" if $options.verbose
+            @db.execute("INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')")
+        rescue SQLite3::SQLException => e
+            puts "Exception inserting data in db ", e
+            puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')"
+        end
+      else
+        begin
+          puts "Updating #{entry.dn} with TS: #{ts}" if $options.verbose
+          @db.execute("UPDATE users SET created = '#{entry.createTimestamp}', last_modified = '#{entry.modifyTimestamp}', roster_modified = '#{ts}', netid = '#{username}', first = '#{first_name}', last = '#{last_name}', first_last = '#{uid_alias}', bz = '#{bz}', bl = '#{bl}', gf = '#{gf}', hv = '#{hv}', forward = '#{forward.join(",")}', google = '#{google}' WHERE idx = '#{entry.uniqueIdentifier}'")
+        rescue SQLite3::SQLException => e
+          puts "Exception updating data in db ", e
+          puts "QUERY: "+"UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}'"
+        end
       end
-   end
+    end
 
    def check(entry, source_stamp)
       source = Time.parse(source_stamp[0])
-      @db.execute("SELECT last_modified FROM users WHERE idx='#{entry}'") do |ts|
+      @db.execute("SELECT roster_modified FROM users WHERE idx='#{entry}'") do |ts|
           now = Time.parse(ts.to_s)
           if now < source 
              return true
@@ -272,7 +279,7 @@ if $config['source'].has_key?('extras')
 end
 #
 # Build the ldap filter & grab the users
-#filter_string = "(&(createTimestamp#{$options.operator}#{ts})(|#{config['source']['filter']}#{admin_filter}#{extra_filter}))"
+#filter_string = "(&(modifyTimestamp#{$options.operator}#{ts})(|#{config['source']['filter']}#{admin_filter}#{extra_filter}))"
 filter_string = $config['source']['filter']
 if ! extra_filter.empty?
   filter_string = "(|#{filter_string}#{extra_filter})"
@@ -280,6 +287,7 @@ end
 if ! admin_filter.empty?
   filter_string = "#{filter_string[0,filter_string.length-1]}#{admin_filter})"
 end
+filter_string = "(&(modifyTimestamp#{$options.operator}#{ts})#{filter_string})"
 puts "Filter String: #{filter_string}" if $options.verbose
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => $config["source"]["base"], :filter => filter, :attributes => attributes)
