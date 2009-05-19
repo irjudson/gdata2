@@ -1,7 +1,10 @@
 #!/usr/bin/env ruby
 #
 #
-$: << '../lib'
+ipath = File.expand_path(File.dirname(__FILE__))+'/../lib'
+$:.unshift(ipath) unless $:.include?(ipath)
+#puts "IP: #{ipath}"
+#$: << '../lib'
 
 require 'rubygems'
 require 'sqlite3'
@@ -117,8 +120,7 @@ class State
          forward.push(fwalias)
        end
       end
-     if ($config.has_key?('admins') && $config['admins'].include?(uid_alias))
-       || ($config.has_key?('extras') && $config['extras'].include?(uid_alias))
+     if (($config.has_key?('admins') && $config['admins'].include?(uid_alias))         || ($config.has_key?('extras') && $config['extras'].include?(uid_alias)))
        google = 1
      end
       if entry.givenName.is_a?(Array)
