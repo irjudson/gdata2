@@ -108,10 +108,10 @@ class State
       hv = 0
       entry.montanaEduPersonClassicRoles.each do |role|
         case role[0..3]
-          when "bz_s", "bz_w": (fwalias = "#{uid_alias}@msu.montana.edu") && bz = 1 && google = 1
-          when "bl_s", "bl_w": (fwalias = "#{uid_alias}@student.msubillings.edu") && bl = 1 && google = 1
-          when "gf_s", "gf_w": (fwalias = "#{uid_alias}@my.msugf.edu") && gf = 1 && google = 1
-          when "hv_s", "hv_w": (fwalias = "#{uid_alias}@students.msun.edu") && hv = 1 && google = 1
+          when "bz_s": (fwalias = "#{uid_alias}@msu.montana.edu") && bz = 1 && google = 1
+          when "bl_s": (fwalias = "#{uid_alias}@student.msubillings.edu") && bl = 1 && google = 1
+          when "gf_s": (fwalias = "#{uid_alias}@my.msugf.edu") && gf = 1 && google = 1
+          when "hv_s": (fwalias = "#{uid_alias}@students.msun.edu") && hv = 1 && google = 1
           when "bz_e", "bl_e", "gf_e", "hv_e": (fwalias = get_mail(entry)) && google = 0
           else
             puts "Unknown role found! #{role[0..3]}" if options.verbose
