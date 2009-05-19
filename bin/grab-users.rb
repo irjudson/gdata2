@@ -117,7 +117,8 @@ class State
          forward.push(fwalias)
        end
       end
-     if $config['admins'].include?(uid_alias) || $config['extras'].include?(uid_alias)
+     if ($config.has_key?('admins') && $config['admins'].include?(uid_alias))
+       || ($config.has_key?('extras') && $config['extras'].include?(uid_alias))
        google = 1
      end
       if entry.givenName.is_a?(Array)
