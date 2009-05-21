@@ -1,0 +1,320 @@
+#!/usr/bin/env ruby
+$: << '../lib'
+
+require 'rubygems'
+require 'sqlite3'
+require 'optparse'
+require 'thread'
+require 'timeout'
+require 'ostruct'
+
+require 'gdata'
+require 'gdata/apps'
+require 'timestamp'
+require 'statedb'
+
+$options = OpenStruct.new
+$queue = Array.new
+$sync = Mutex.new
+$source = nil
+$count = 0
+$forward_domains = Hash.new
+
+def create_and_update_user(apps, entry, config)
+   uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
+   username = uid_dn
+   first = entry.givenname
+   last = entry.sn
+   password = random_password
+   nickname = uid_alias
+   update = false
+
+   # create user
+   puts "#{$count} Creating user #{username}." if $options.verbose
+   begin
+     result = apps.provision.create_user(username, first, last, password)
+     puts "Result: #{result}" if $options.debug
+     update = true
+   rescue GData::GDataError => e
+     if e.code == "1300"
+       puts "  => Create User #{username} exists" if $options.verbose
+       update = true
+     elsif e.code == "1000"
+       puts "  => Create User #{username} unknown error" if $options.verbose
+       update = false
+       #retry
+     else
+       puts "Error creating user: #{username}" if $options.verbose
+       raise e
+     end
+   rescue OpenSSL::SSL::SSLError => e
+     retry
+   end
+
+   # update so they don't have to change their password at next login
+   puts "    Setting password reset to false for |#{username}|." if $options.verbose
+   if config['source']['admins'].include?(nickname)
+     admin = true
+   else
+     admin = false
+   end
+   begin
+     result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
+     puts "Result: #{result}" if $options.debug
+     update = true
+   rescue GData::GDataError => e
+     if e.code == "1300"
+       puts "  => Set password reset to false #{username} exists" if $options.verbose
+       update = true
+     elsif e.code == "1000"
+       puts "  => setting password reset to false  #{username} unknown error" if $options.verbose
+       update = false
+       #retry
+     else
+       puts "Error creating user: #{username}" if $options.verbose
+       raise e
+     end
+   rescue OpenSSL::SSL::SSLError => e
+     retry
+   end
+
+   if uid_dn != uid_alias
+     # Add the email address they're used to seeing
+     begin
+       puts "    Adding alias |#{nickname}| to |#{username}|." if $options.verbose
+       result = apps.provision.create_nickname(username, nickname)
+       puts "Result: #{result}" if $options.debug
+       update = true
+     rescue GData::GDataError => e
+       if e.code == "1300"
+         puts "  => adding alias #{nickname} to  #{username} exists" if $options.verbose
+         update = true
+       elsif e.code == "1000"
+         puts "  => adding alias #{nickname} to  #{username} unknown error" if $options.verbose
+         update = false
+         #retry
+       else
+         puts "Error creating user: #{username}" if $options.verbose
+         raise e
+       end
+     rescue OpenSSL::SSL::SSLError => e
+       retry
+     end
+   end
+
+   if $options.forward
+     active = false
+     entry.montanaEduPersonClassicRoles.each do |role|
+       if $forward_domains.has_key?(role[0..3])
+         active = true
+         forward = "#{username}@#{$forward_domains[role[0..3]]}"
+       elsif role[3,1] == "e"
+         active = false
+         forward = entry.mail
+       end
+       begin
+         # Add the email address they're used to seeing
+         puts "    Adding mailforward |#{forward}| to |#{username}|." if $options.verbose
+         result = apps.mail.update_forward(username, forward, "KEEP", active)
+         puts "Result: #{result}" if $options.debug
+         update = true
+       rescue GData::GDataError => e
+         if e.code == "1300"
+           puts "  => adding mailforward #{forward} to  #{username} exists" if $options.verbose
+           update = true
+         elsif e.code == "1000"
+           puts "  => adding mailforward #{forward} to  #{username} unknown error" if $options.verbose
+           update = false
+           #retry
+         else
+           puts "Error creating user: #{username}" if $options.verbose
+           raise e
+         end
+       rescue OpenSSL::SSL::SSLError => e
+         retry
+       end
+     end
+   end
+
+   if config['apps']['domain'] != config['apps']['maildomain']
+     send_as_name = "#{first} #{last}"
+     send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
+     begin
+       # Add the email address they're used to seeing
+       puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
+       result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+       puts "Result: #{result}" if $options.debug
+       update = true
+     rescue GData::GDataError => e
+       if e.code == "1300"
+         puts "  => creating send as alias #{send_as_name} for  #{username} exists" if $options.verbose
+         update = true
+       elsif e.code == "1000"
+         puts "  => creating send as alias #{send_as_name} for  #{username} uknown error" if $options.verbose
+         update = false
+         #retry
+       else
+         puts "Error creating user: #{username}" if $options.verbose
+         raise e
+       end
+     rescue OpenSSL::SSL::SSLError => e
+       retry
+     end
+   end
+
+   $sync.synchronize {
+      $count += 1
+   }
+   if (($count % 100) == 0)
+      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
+   end
+
+   return update
+end
+
+# Parse commandline options
+OptionParser.new do |opts|
+   $options.verbose = false
+   $options.config = 'config.yml'
+   $options.reset = false
+   $options.statedbfn = nil
+   $options.doit = true
+   $options.threads = 1
+   $options.forward = false
+
+   opts.banner = "Usage: gapps-provision.rb [options]"
+
+   opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
+      $options.reset = true
+      $options.operator = "<="
+   end
+
+   opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
+      $options.config = o.to_s
+   end
+
+   opts.on("-v", "--verbose", "Operate verbosely.") do |o|
+      $options.verbose = true
+   end
+
+   opts.on("-s", "--statdb [DBFILE]", "State Database file.") do |o|
+      $options.statedbfn = o
+   end
+
+   opts.on("-n", "--not-really", "Don't really perform the operations, just pretend.") do |o|
+      $options.doit = false
+   end
+
+   opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
+      $options.threads = o.to_i
+   end
+
+   opts.on_tail("--version", "Show version") do
+      puts OptionParser::Version.join('.')
+   end
+end.parse!
+
+# Load configuration file
+config = YAML.load_file($options.config)
+
+if $options.statedbfn.nil?
+  $options.statedbfn = config["state"]["file"]
+end
+
+# Create the Google Apps user and objects
+user = config["apps"]["user"]+"@"+config["apps"]["domain"]
+puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
+apps = GData::GApps.new(user, config["apps"]["password"])
+
+# Create a local state store for keeping track of things between runs
+state_db = State.new($options.statedbfn)
+
+if $options.reset
+  # Rebuild Google data in statedb from google
+  state_db.reset_google
+  state_db.init_google
+
+  apps.provision.retrieve_all_users.each do |user|
+    nicks = apps.provision.retrieve_nicknames(user.username)
+    na = nicks.map{ |n| n.nickname }
+    state_db.update_google(user.username, user.given_name, user.family_name, user.admin, na)
+  end
+end
+
+# Find users in statedb that need updating, that is their information in the ldap side doesn't match the information
+# on the google side)
+# accounts.each do |entry|
+#    puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.debug
+#    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
+#       if $output.nil?
+#          $queue << entry
+#       else
+#          $output << ["#{entry.montanaEduPersonID}", "#{entry.givenname}", "#{entry.sn}", "#{random_password}"]
+#       end
+#    end
+# end
+#
+# puts "There are #{$queue.length} users to process this time."
+#
+# # Create the Google Apps user and objects
+# user = config["apps"]["user"]+"@"+config["apps"]["domain"]
+# puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
+# apps = GData::GApps.new(user, config["apps"]["password"])
+#
+# # Create an array to store worker threads.
+# workers = []
+#
+# # Exit if an exception occurs in a thread.
+# Thread.abort_on_exception = true
+#
+# $chunk_size = $queue.length / $options.threads
+#
+# $options.threads.times do |n|
+#    workers[n] = Thread.new do
+#       my_id = n
+#       # Take work out of global queue
+#       my_start = my_id * $chunk_size
+#       my_end = (my_start + $chunk_size) - 1
+#       puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
+#       (my_start..my_end).each do |index|
+#          entry = $queue[index]
+#          if create_and_update_user(apps, entry, config)
+#             state_db.push_update(entry.uniqueIdentifier)
+#          end
+#       end
+#       puts "Thread #{my_id} exiting." if $options.debug
+#       Thread.exit
+#    end
+# end
+#
+# # Wait for workers to finish
+# workers.each { |w| w.join }
+# workers = []
+#
+# print "After worker threads have exited, processing leftovers..." if $options.debug
+#
+# # do the remaining entries that were left over as a result of uneven workloads
+# leftovers_start = $options.threads * $chunk_size
+# leftovers_end = $queue.length - 1
+# left_overs_length = leftovers_end - leftovers_start
+# if left_overs_length > 0
+#   puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftovers_end}"
+#   (leftovers_start..leftovers_end).each do |index|
+#      workers[index] = Thread.new do
+#         my_id = index
+#         puts "Thread #{Thread.current} ID: #{my_id}" if $options.debug
+#         entry = $queue[index]
+#         #  puts "Entry: #{entry.inspect} #{entry.class}"
+#         if create_and_update_user(apps, entry, config)
+#            state_db.push_update(entry.uniqueIdentifier)
+#         end
+#         puts "Thread #{my_id} exiting." if $options.debug
+#         Thread.exit
+#      end
+#   end
+#   workers.each {|w| w.join if ! w.nil? }
+#   print "done.\n" if $options.debug
+# end
+#
+
+state_db.close

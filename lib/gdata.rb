@@ -22,12 +22,12 @@ module GData #:nodoc:
     end
 
     # Performs the http request and returns the http response
-    def perform(method, path, body=nil, header=nil)
+    def perform(method, path='', body=nil, header=nil)
       backoff_factor = 2
       resp = nil
       while resp.nil?
         begin
-          req = Net::HTTPGenericRequest.new(method, !body.nil?, true, path)
+          req = Net::HTTPGenericRequest.new(method, ! body.nil?, true, path)
           req['Content-Type'] = header['Content-Type'] if header['Content-Type']
           req['Authorization'] = header['Authorization'] if header['Authorization']
           req['Content-length'] = body.length.to_s if body
@@ -42,9 +42,9 @@ module GData #:nodoc:
           else
             return e
           end
-	rescue Errno::EPIPE
-	  retry
-	rescue EOFError
+        rescue Errno::EPIPE
+          retry
+        rescue EOFError
         end
       end
 
