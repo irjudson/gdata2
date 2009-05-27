@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 $: << '../lib'
 
+require 'benchmark'
+
 require 'rubygems'
 require 'sqlite3'
 require 'optparse'
@@ -172,6 +174,7 @@ def create_and_update_user(apps, entry, config)
    return update
 end
 
+# --------------------------------------------------
 # Parse commandline options
 OptionParser.new do |opts|
    $options.verbose = false
@@ -193,9 +196,14 @@ OptionParser.new do |opts|
       $options.config = o.to_s
    end
 
-   opts.on("-v", "--verbose", "Operate verbosely.") do |o|
+   opts.on("-v", "--verbose", "Operate verbosely ;not implemented;") do |o|
       $options.verbose = true
    end
+
+   opts.on("-d", "--debug", "debugging output") do |o|
+      $options.debug = true
+   end
+
 
    opts.on("-s", "--statdb [DBFILE]", "State Database file.") do |o|
       $options.statedbfn = o
@@ -217,10 +225,6 @@ end.parse!
 # Load configuration file
 config = YAML.load_file($options.config)
 
-if $options.statedbfn.nil?
-  $options.statedbfn = config["state"]["file"]
-end
-
 # Create the Google Apps user and objects
 user = config["apps"]["user"]+"@"+config["apps"]["domain"]
 puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
@@ -229,17 +233,44 @@ apps = GData::GApps.new(user, config["apps"]["password"])
 # Create a local state store for keeping track of things between runs
 state_db = State.new($options.statedbfn)
 
+#--------------------------------------------------
+# act on options
+
+if $options.statedbfn.nil?
+  $options.statedbfn = config["state"]["file"]
+end
+
 if $options.reset
   # Rebuild Google data in statedb from google
-  state_db.reset_google
-  state_db.init_google
+  benchmark = Benchmark.realtime do
+    state_db.reset_google
+  end
+  puts "reset took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
+  benchmark = Benchmark.realtime do
+    state_db.init_google
+  end
+  puts "init took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
+  
+  benchmark = Benchmark.realtime do
+    users = apps.provision.retrieve_all_users
+  end
+  puts "retrieve all users took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
 
-  apps.provision.retrieve_all_users.each do |user|
+  users.each do |user|
+    puts user.username
     nicks = apps.provision.retrieve_nicknames(user.username)
     na = nicks.map{ |n| n.nickname }
     state_db.update_google(user.username, user.given_name, user.family_name, user.admin, na)
   end
-end
+
+end #resetting/creating the db
+
+# Todo
+#   load the db
+#   read in all the accounts 
+#   load the other db..... ,unsure,
+#   diff the two entries based on timestamp
+#        push entry into queue if diff
 
 # Find users in statedb that need updating, that is their information in the ldap side doesn't match the information
 # on the google side)
@@ -253,9 +284,9 @@ end
 #       end
 #    end
 # end
-#
+
 # puts "There are #{$queue.length} users to process this time."
-#
+
 # # Create the Google Apps user and objects
 # user = config["apps"]["user"]+"@"+config["apps"]["domain"]
 # puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
