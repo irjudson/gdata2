@@ -47,13 +47,21 @@ class State
    end
 
    def reset_source
-     @db.execute("DROP TABLE users;")
-     @db.execute("DROP TABLE updates;")
+     begin 
+       @db.execute("DROP TABLE users;")
+       @db.execute("DROP TABLE updates;")
+     rescue SQLite3::SQLException => e
+       puts "error ", e
+     end
    end
 
    def reset_google
-     @db.execute("DROP TABLE google;")
-     @db.execute("DROP TABLE google_aliases;")
+     begin
+       @db.execute("DROP TABLE google;")
+       @db.execute("DROP TABLE google_aliases;")
+     rescue SQLite3::SQLException => e
+       puts "error ", e
+     end
    end
 
    def reset
