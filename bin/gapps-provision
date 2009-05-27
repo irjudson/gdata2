@@ -251,11 +251,8 @@ if $options.reset
   end
   puts "init took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
   
-  benchmark = Benchmark.realtime do
-    users = apps.provision.retrieve_all_users
-  end
-  puts "retrieve all users took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
-
+  users = apps.provision.retrieve_all_users
+  
   users.each do |user|
     puts user.username
     nicks = apps.provision.retrieve_nicknames(user.username)
