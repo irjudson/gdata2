@@ -2,3 +2,4 @@
 bin/checkaccounts.rb
 *.sqlite
 *.out
+*~
