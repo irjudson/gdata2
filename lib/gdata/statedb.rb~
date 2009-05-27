@@ -47,25 +47,21 @@ class State
    end
 
    def reset_source
-
      begin 
        @db.execute("DROP TABLE users;")
        @db.execute("DROP TABLE updates;")
      rescue SQLite3::SQLException => e
        puts "error ", e
      end
-
    end
 
    def reset_google
-
      begin
        @db.execute("DROP TABLE google;")
        @db.execute("DROP TABLE google_aliases;")
      rescue SQLite3::SQLException => e
        puts "error ", e
      end
-
    end
 
    def reset
@@ -79,34 +75,6 @@ class State
      @timestamp = "19700000000000Z"
      update_timestamp
    end
-
-# --------------------------------------------------
-# accessors
-# note: these are returning the users as a hash per entry!!!!!
-
-   def users
-     rah = @db.results_as_hash
-     @db.results_as_hash = true
-
-     @db.execute("SELECT * FROM users;") do |user| 
-       yield user 
-     end
-
-     @db.results_as_hash = rah
-   end
-   
-   def google
-     rah = @db.results_as_hash
-     @db.results_as_hash = true
-
-     @db.execute("SELECT * FROM google;") do |google|
-       yield google
-     end
-
-     @db.results_as_hash = rah
-   end
-#
-# --------------------------------------------------
 
    def show_users
       @db.execute("SELECT * FROM updates;") do |ts|
