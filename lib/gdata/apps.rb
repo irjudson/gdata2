@@ -83,11 +83,26 @@ module GData #:nodoc:
       if ! value.nil?
         path = path+value
       end
-      if Thread.current[:connection].nil?
-        Thread.current[:connection] = Connection.new(@@google_host, @@google_port, @proxy, @proxy_port, @proxy_user, @proxy_passwd)
+
+      tries = 3
+      #response_xml = ''
+      #if the thread is going to die, we had better retry it after some delay (this time a flat O(1) delay)
+      begin
+        if Thread.current[:connection].nil?
+          Thread.current[:connection] = Connection.new(@@google_host, @@google_port, @proxy, @proxy_port, @proxy_user, @proxy_passwd)
+        end
+        response = Thread.current[:connection].perform(method, path, message, headers)
+        response_xml = parse_response(response)
+      rescue  GDataError => e
+        puts "Error occured ", e
+      rescue Exception => e
+        Thread.current[:connection] = nil #close the connection (?)
+        puts "Sleeping, Error occured ", e
+        sleep(1)
+        tries -= 1
+        retry if tries > 0
       end
-      response = Thread.current[:connection].perform(method, path, message, headers)
-      response_xml = parse_response(response)
+
       return response_xml
     end
 

@@ -98,7 +98,9 @@ module GData #:nodoc:
       #                       puts "familyName : "+user.family_name
       def retrieve_user(username)
         xml_response = @apps.request(:user_retrieve, username)
-        user_entry = UserEntry.new(xml_response.elements["entry"])
+        if xml_response.respond_to? :elements
+          user_entry = UserEntry.new(xml_response.elements["entry"])
+        end
       end
 
       # Returns a UserEntry array populated with all the users in the domain. May take a while depending on the number of users in your domain.
@@ -190,6 +192,7 @@ module GData #:nodoc:
       #               mynicks.each {|nick| puts nick.nickname }
       def retrieve_nicknames(username)
         xml_response = @apps.request(:nickname_retrieve_all_for_user, username, @headers)
+        
         nicknames_feed = Feed.new(xml_response.elements["feed"],  NicknameEntry)
         nicknames_feed = add_next_feeds(nicknames_feed, xml_response, NicknameEntry)
       end
@@ -383,7 +386,9 @@ module GData #:nodoc:
       # Ex : user_feed = Feed.new(xml_feed, UserEntry)
       #               nickname_feed = Feed.new(xml_feed, NicknameEntry)
       def initialize(xml_feed, element_class)
-        xml_feed.elements.each("entry"){ |entry| self << element_class.new(entry) }
+        if xml_feed.respond_to? :elements
+          xml_feed.elements.each("entry"){ |entry| self << element_class.new(entry) }
+        end
       end
     end
 

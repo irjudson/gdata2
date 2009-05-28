@@ -99,9 +99,11 @@ class State
      rah = @db.results_as_hash
      @db.results_as_hash = true
 
-     @db.execute("SELECT * FROM google;") do |google|
-       yield google
-     end
+     # @db.execute("SELECT * FROM google;") do |google|
+     #   yield google
+     # end
+     
+     yield @db.execute("SELECT * FROM google;")
 
      @db.results_as_hash = rah
    end
@@ -223,12 +225,13 @@ class State
       rescue SQLite3::SQLException => e
         puts "Exception inserting google user in db ", e
       end
-
-      aliases.each do |a|
-        begin
-          @db.execute("INSERT INTO google_aliases (alias, g_username) VALUES ('#{a}', '#{uname}');")
-        rescue SQLite3::SQLException => e
-          puts "Exception inserting google alias in state db ", e
+      if aliases.respond_to? :each
+        aliases.each do |a|
+          begin
+            @db.execute("INSERT INTO google_aliases (alias, g_username) VALUES ('#{a}', '#{uname}');")
+          rescue SQLite3::SQLException => e
+            puts "Exception inserting google alias in state db ", e
+          end
         end
       end
     end
