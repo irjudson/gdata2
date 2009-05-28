@@ -105,6 +105,18 @@ class State
 
      @db.results_as_hash = rah
    end
+
+   def google_aliases
+     rah = @db.results_as_hash
+     @db.results_as_hash = true
+
+     @db.execute("SELECT * FROM google_aliases;") do |google|
+       yield google
+     end
+
+     @db.results_as_hash = rah
+   end
+
 #
 # --------------------------------------------------
 
