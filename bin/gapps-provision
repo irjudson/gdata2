@@ -174,7 +174,7 @@ def create_and_update_user(apps, entry, config)
    end
 
    return update
-end
+end # /end create_and_update_user
 
 
 def convert_time(stime)
@@ -184,7 +184,7 @@ def convert_time(stime)
 
 end
 
-def absent_keys(state_db)
+def get_hashed_data(state_db)
   userA = Array.new
   googleA = Array.new
 
@@ -192,8 +192,27 @@ def absent_keys(state_db)
   state_db.users {|user| userA << user}
   state_db.google { |goog| googleA = goog }
 
-  userH = userA.inject({}){|h, item| h[item["netid"]] = item ; h }
-  googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
+  user_table = userA.inject({}){|h, item| h[item["netid"]] = item ; h }
+  google_table = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
+
+  return [ user_table, google_table]
+
+end
+
+def absent_keys(state_db)
+  # userA = Array.new
+  # googleA = Array.new
+
+  # #drill in and grab a copy of the db as a hash....
+  # state_db.users {|user| userA << user}
+  # state_db.google { |goog| googleA = goog }
+
+  # userH = userA.inject({}){|h, item| h[item["netid"]] = item ; h }
+  # googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
+
+  userH = Hash.new
+  googleH = Hash.new
+  ( userH, googleH ) = get_hashed_data(state_db)
 
   puts userH.keys.length
   puts googleH.keys.length
@@ -321,6 +340,10 @@ absent_google_keys = absent_keys(state_db)
 puts absent_google_keys.join(", ")
 puts absent_google_keys.length
 
+
+
+
+
 state_db.close
 # --------------------------------------------------
 
@@ -331,9 +354,9 @@ state_db.close
 #puts googleA[0]["username"]
 
 # Todo
-#   load the db
-#   read in all the accounts
-#   load the other db..... ,unsure,
+# X  load the db
+# X  read in all the accounts
+# X  load the other db..... ,unsure,
 #   diff the two entries based on timestamp
 #        push entry into queue if diff
 
