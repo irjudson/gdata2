@@ -22,6 +22,8 @@ $source = nil
 $count = 0
 $forward_domains = Hash.new
 
+# --------------------------------------------------
+# functions
 def create_and_update_user(apps, entry, config)
    uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
    username = uid_dn
@@ -174,6 +176,57 @@ def create_and_update_user(apps, entry, config)
    return update
 end
 
+
+def convert_time(stime)
+
+  stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+  return Time.gm($1,$2,$3,$4,$5,$6).to_i
+
+end
+
+def absent_keys(state_db)
+  userA = Array.new
+  googleA = Array.new
+
+  #drill in and grab a copy of the db as a hash....
+  state_db.users {|user| userA << user}
+  state_db.google { |goog| googleA = goog }
+
+  userH = userA.inject({}){|h, item| h[item["netid"]] = item ; h }
+  googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
+
+  puts userH.keys.length
+  puts googleH.keys.length
+
+  absent_google_keys = ( userH.keys - googleH.keys)
+  return absent_google_keys
+end
+
+def refresh_absent_keys(absent_google_keys, apps, state_db)
+  really_absent = []
+
+  absent_google_keys.sort{rand(5)}.each do |entry|
+    user = apps.provision.retrieve_user(entry)
+    if user.respond_to? :username
+      nicks = apps.provision.retrieve_nicknames(user.username)
+      if nicks
+        na = nicks.map{ |n| n.nickname }
+      end
+
+      state_db.update_google(user.username, user.given_name, user.family_name, user.admin, na)
+
+    else
+      really_absent << entry
+    end
+  end
+
+  #puts really_absent.join(', ')
+  return really_absent
+end
+
+# --------------------------------------------------
+
+
 # --------------------------------------------------
 # Parse commandline options
 OptionParser.new do |opts|
@@ -250,9 +303,9 @@ if $options.reset
     state_db.init_google
   end
   puts "init took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
-  
+
   users = apps.provision.retrieve_all_users
-  
+
   users.each do |user|
     puts user.username
     nicks = apps.provision.retrieve_nicknames(user.username)
@@ -262,9 +315,24 @@ if $options.reset
 
 end #resetting/creating the db
 
+# --------------------------------------------------
+absent_google_keys = absent_keys(state_db)
+
+puts absent_google_keys.join(", ")
+puts absent_google_keys.length
+
+state_db.close
+# --------------------------------------------------
+
+#puts userA.select{|entry| entry["roster_modified"].to_i < entry["last_modified"].to_i }.length
+#puts userA.length
+
+#puts userA[0]["netid"]
+#puts googleA[0]["username"]
+
 # Todo
 #   load the db
-#   read in all the accounts 
+#   read in all the accounts
 #   load the other db..... ,unsure,
 #   diff the two entries based on timestamp
 #        push entry into queue if diff
@@ -344,5 +412,3 @@ end #resetting/creating the db
 #   print "done.\n" if $options.debug
 # end
 #
-
-state_db.close
