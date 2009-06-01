@@ -210,15 +210,6 @@ def get_hashed_data(state_db)
 end
 
 def absent_keys(state_db)
-  # userA = Array.new
-  # googleA = Array.new
-
-  # #drill in and grab a copy of the db as a hash....
-  # state_db.users {|user| userA << user}
-  # state_db.google { |goog| googleA = goog }
-
-  # userH = userA.inject({}){|h, item| h[item["netid"]] = item ; h }
-  # googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
 
   userH = Hash.new
   googleH = Hash.new
@@ -229,6 +220,7 @@ def absent_keys(state_db)
 
   absent_google_keys = ( userH.keys - googleH.keys)
   return absent_google_keys
+
 end
 
 def refresh_absent_keys(absent_google_keys, apps, state_db)
@@ -351,7 +343,7 @@ absent_google_keys = absent_keys(state_db)
 puts "Absent users upstream: #{absent_google_keys.length}"
 
 
-#roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified 
+#roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified
 
 (roster, google) = get_hashed_data(state_db)
 
@@ -367,8 +359,9 @@ absent_google_keys.each do |key|
   hv << key if roster[key]["hv"] == "1"
 end
 
-puts bl.length
-
+found = bl + bz + gf + hv
+puts "Found following: #{found.uniq.length} uniq affiliated #{found.length} total"
+puts (absent_google_keys - found.uniq).length
 
 state_db.close
 # --------------------------------------------------
