@@ -351,12 +351,23 @@ absent_google_keys = absent_keys(state_db)
 puts "Absent users upstream: #{absent_google_keys.length}"
 
 
-#(roster, google) = get_hashed_data(state_db)
 #roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified 
 
-#puts  roster[absent_google_keys[0]].keys.select{|k| k.class == String }.sort.join(",")
+(roster, google) = get_hashed_data(state_db)
 
-puts random_password
+bl = Array.new
+bz = Array.new
+gf = Array.new
+hv = Array.new
+
+absent_google_keys.each do |key|
+  bl << key if roster[key]["bl"] == "1"
+  bz << key if roster[key]["bz"] == "1"
+  gf << key if roster[key]["gf"] == "1"
+  hv << key if roster[key]["hv"] == "1"
+end
+
+puts bl.length
 
 
 state_db.close
