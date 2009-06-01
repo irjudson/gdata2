@@ -24,6 +24,16 @@ $forward_domains = Hash.new
 
 # --------------------------------------------------
 # functions
+
+
+def random_password(size = 12)
+   chars = (('a'..'z').to_a + ('0'..'9').to_a) - %w(i o 0 1 l 0)
+   password = (1..size).collect{|a| chars[rand(chars.size)] }.join
+   #  sha1 = Digest::SHA1.hexdigest(password)
+   return password
+end
+
+
 def create_and_update_user(apps, entry, config)
    uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
    username = uid_dn
@@ -337,11 +347,16 @@ end #resetting/creating the db
 # --------------------------------------------------
 absent_google_keys = absent_keys(state_db)
 
-puts absent_google_keys.join(", ")
-puts absent_google_keys.length
+#puts absent_google_keys.join(", ")
+puts "Absent users upstream: #{absent_google_keys.length}"
 
 
+#(roster, google) = get_hashed_data(state_db)
+#roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified 
 
+#puts  roster[absent_google_keys[0]].keys.select{|k| k.class == String }.sort.join(",")
+
+puts random_password
 
 
 state_db.close
