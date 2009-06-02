@@ -361,11 +361,15 @@ puts "Absent users upstream: #{absent_google_keys.length}"
 
 (roster, google) = get_hashed_data(state_db)
 
+threads = []
 #config["domains"].keys.each { |domain|
 apps.each { |app|
+  threads << Thread.new {
   puts app.domain
   refresh_absent_keys(absent_google_keys, app, state_db)
+  }
 }
+threads.each {|t| t.join}
 
 state_db.close
 # --------------------------------------------------
