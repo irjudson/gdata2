@@ -28,7 +28,7 @@ class State
    end
 
    def init_google
-      @db.execute("CREATE TABLE google (username TEXT PRIMARY KEY, first_name TEXT, last_name TEXT, admin TEXT);")
+      @db.execute("CREATE TABLE google (username TEXT PRIMARY KEY, first_name TEXT, last_name TEXT, domain TEXT, admin TEXT);")
       @db.execute("CREATE TABLE google_aliases (alias TEXT, g_username TEXT NOT NULL CONSTRAINT fk_google_id REFERENCES google(username) ON DELETE CASCADE);")
       @db.execute("CREATE TRIGGER fki_google_aliases_username BEFORE INSERT ON google_aliases FOR EACH ROW BEGIN SELECT RAISE(ROLLBACK, 'insert on table \"google\" violates foreign key constraint \"fk_google_id\"') WHERE (SELECT username FROM google WHERE username = NEW.g_username) IS NULL;END;")
       @db.execute("CREATE TRIGGER fku_google_aliases_username BEFORE UPDATE ON google_aliases FOR EACH ROW BEGIN SELECT RAISE(ROLLBACK, 'update on table \"google\" violates foreign key constraint \"fk_google_id\"') WHERE (SELECT username FROM google WHERE username = NEW.g_username) IS NULL;END;")
@@ -48,7 +48,7 @@ class State
 
    def reset_source
 
-     begin 
+     begin
        @db.execute("DROP TABLE users;")
        @db.execute("DROP TABLE updates;")
      rescue SQLite3::SQLException => e
@@ -88,13 +88,13 @@ class State
      rah = @db.results_as_hash
      @db.results_as_hash = true
 
-     @db.execute("SELECT * FROM users;") do |user| 
-       yield user 
+     @db.execute("SELECT * FROM users;") do |user|
+       yield user
      end
 
      @db.results_as_hash = rah
    end
-   
+
    def google
      rah = @db.results_as_hash
      @db.results_as_hash = true
@@ -102,7 +102,7 @@ class State
      # @db.execute("SELECT * FROM google;") do |google|
      #   yield google
      # end
-     
+
      yield @db.execute("SELECT * FROM google;")
 
      @db.results_as_hash = rah
@@ -219,18 +219,25 @@ class State
       end
     end
 
-    def update_google(uname, fname, lname, admin, aliases)
+    def update_google(uname, fname, lname, domain, admin, aliases)
       begin
-        @db.execute("INSERT INTO google (username, first_name, last_name, admin) VALUES ('#{uname}','#{fname}', '#{lname}', '#{admin}');")
+        first_name = fname.sub(/'/,"\?'").sub('?','\\') #FIXED: For D'Ann names
+        last_name  = lname.sub(/'/,"\?'").sub('?','\\') #FIXED: For O'Rourke names
+
+        @db.execute("INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');")
       rescue SQLite3::SQLException => e
-        puts "Exception inserting google user in db ", e
+        if e.to_s.match(/syntax/)
+          puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');","\t#{ e }",first_name
+        else
+          puts "Exception inserting google user in db #{ e } - #{uname}"
+        end
       end
       if aliases.respond_to? :each
         aliases.each do |a|
           begin
             @db.execute("INSERT INTO google_aliases (alias, g_username) VALUES ('#{a}', '#{uname}');")
           rescue SQLite3::SQLException => e
-            puts "Exception inserting google alias in state db ", e
+            puts "Exception inserting google alias in state db #{ e }"
           end
         end
       end
