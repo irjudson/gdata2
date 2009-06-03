@@ -226,12 +226,17 @@ class State
 
         @db.execute("INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');")
       rescue SQLite3::SQLException => e
-        if e.to_s.match(/syntax/)
-          puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');","\t#{ e }",first_name
+        if e.to_s.match(/syntax/) #is our insert syntax wrong?
+          puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
         else
-          puts "Exception inserting google user in db #{ e } - #{uname}"
+          if e.to_s.match(/unique/) #we've already seen them?
+            puts "Username not unique: #{uname} #{first_name} #{last_name}"
+          else
+            puts "Exception inserting google user in db #{ e } - #{uname}"
+          end
         end
       end
+
       if aliases.respond_to? :each
         aliases.each do |a|
           begin
