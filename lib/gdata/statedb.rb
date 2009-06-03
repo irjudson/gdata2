@@ -242,7 +242,7 @@ class State
           begin
             @db.execute("INSERT INTO google_aliases (alias, g_username) VALUES ('#{a}', '#{uname}');")
           rescue SQLite3::SQLException => e
-            puts "Exception inserting google alias in state db #{ e }"
+            STDERR.puts "Exception inserting google alias in state db #{ e }"
           end
         end
       end
