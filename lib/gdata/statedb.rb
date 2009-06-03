@@ -221,8 +221,8 @@ class State
 
     def update_google(uname, fname, lname, domain, admin, aliases)
       begin
-        first_name = fname.sub(/'/,"\?'").sub('?','\\') #FIXED: For D'Ann names
-        last_name  = lname.sub(/'/,"\?'").sub('?','\\') #FIXED: For O'Rourke names
+        first_name = fname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For D'Ann names and the "Nita" roster entry
+        last_name  = lname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For O'Rourke names
 
         @db.execute("INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');")
       rescue SQLite3::SQLException => e
