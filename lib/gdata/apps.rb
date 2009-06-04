@@ -94,10 +94,10 @@ module GData #:nodoc:
         response = Thread.current[:connection].perform(method, path, message, headers)
         response_xml = parse_response(response)
       rescue  GDataError => e
-        puts "Error occured ", e
+        STDERR.puts "Error occured ", e
       rescue Exception => e
         Thread.current[:connection] = nil #close the connection (?)
-        puts "Sleeping, Error occured ", e
+        STDERR.puts "Sleeping, Error occured " + e.to_s
         sleep(1)
         tries -= 1
         retry if tries > 0
@@ -120,7 +120,7 @@ module GData #:nodoc:
       begin
         xml = Document.new(response.body)
       rescue Exception => e
-        puts "Error processing response: ", e
+        STDERR.puts "Error processing response: ", e
         return nil
       end
 
