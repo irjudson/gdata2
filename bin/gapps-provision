@@ -28,7 +28,7 @@ $forward_domains = Hash.new
 
 #print the list num wide
 
-def pretty_print(list,num) 
+def pretty_print(list,num)
   a = list.dup #otherwise slice! will eat your incoming list
   while a.length > 0
     STDERR.puts a.slice!(0,num).join(" ")
@@ -203,36 +203,6 @@ def convert_time(stime)
 
 end
 
-
-def get_hashed_data(state_db)
-  userA = Array.new
-  googleA = Array.new
-
-  #drill in and grab a copy of the db as a hash....
-  state_db.users {|user| userA << user}
-  state_db.google { |goog| googleA = goog }
-
-  user_table = userA.inject({}){|h, item| h[item["netid"]] = item ; h }
-  google_table = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
-
-  return [ user_table, google_table]
-
-end
-
-def absent_keys(state_db)
-
-  userH = Hash.new
-  googleH = Hash.new
-  ( userH, googleH ) = get_hashed_data(state_db)
-
-  puts userH.keys.length
-  puts googleH.keys.length
-
-  absent_google_keys = ( userH.keys - googleH.keys)
-  return absent_google_keys
-
-end
-
 def refresh_absent_keys(absent_google_keys, apps, state_db)
   really_absent = []
 
@@ -262,7 +232,7 @@ def find_changed(google_table, user_table)
     if google_table[key]
       if user_table[key]["last"] != google_table[key]["last_name"] or
            user_table[key]["first"] != google_table[key]["first_name"]
-        STDERR.puts "Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}"
+        puts "*CHANGED* First: #{user_table[key]["first"]} Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}"
         changed << key
       end
     end
@@ -289,6 +259,16 @@ def find_new(google_table, user_table, app, state_db) # ireally need to just mak
   return not_found
 
 end #find_new
+
+def user_hash_data(app,userA,googleA,config)
+  # select people that are from (app.domain db_key) (apps' domain)
+  users = userA.select{ |user| user[ config["domains"][app.domain]["db_key"] ] == "1" }
+
+  user_table = users.inject({}){|h, item| h[item["netid"]] = item ; h } #might want to do a googleA.keys == app.domain check and subtrack it from the user_t keys
+  google_table = googleA.inject({}){|h, item| h[item["username"]] = item  if item["domain"] == app.domain ; h } #create a hash of keys that are app.domain
+  return [ user_table, google_table ]
+end
+
 
 # --------------------------------------------------
 
@@ -407,18 +387,14 @@ total_changed = []
 
 apps.each {  |app|
 
-  # select people that are from (app.domain db_key) (apps' domain)
-  users = userA.select{ |user| user[ config["domains"][app.domain]["db_key"] ] == "1" }
-
-  user_table = users.inject({}){|h, item| h[item["netid"]] = item ; h } #might want to do a googleA.keys == app.domain check and subtrack it from the user_t keys
-  google_table = googleA.inject({}){|h, item| h[item["username"]] = item  if item["domain"] == app.domain ; h } #create a hash of keys that are app.domain
+  (user_table, google_table) = user_hash_data(app,userA, googleA,config)
 
   STDERR.puts "Users for #{app.domain} - #{user_table.keys.length}"  if $options.debug
 
   not_found = find_new(google_table, user_table, app, state_db)
 
   if $options.debug
-    STDERR.puts "** Users that still requiring provisioning : " 
+    STDERR.puts "** Users that still requiring provisioning : "
     pretty_print(not_found.map { |key|
                    user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
                  }, 5)
@@ -437,104 +413,23 @@ apps.each {  |app|
   total_new = total_new + not_found
 
 }
-# ijust realized that if you are changed you might need to work across
-# each app and changed each last name and/or first name 
-puts "Needs Created: #{total_new.length}"
-puts "Needs Changed: #{total_changed.length}"
 
+# ijust realized that if you are changed you might need to work across
+# each app and changed each last name and/or first name
+puts "Needs Created: #{total_new.length}"
+pretty_print(total_new, 5)
+
+puts "Needs Changed: #{total_changed.length}"
+pretty_print(total_changed, 5)
+
+# apps.each do |app|
+#     total_changed.each do |change|
+#     #puts 'apps.provision.update_user(key,user_table[key]["first"], user_table[key]["last"]'
+
+#     puts user_table[change][ config["domain"][app.domain]["db_key"] ]
+
+#   end
+# end
 
 state_db.close
 # --------------------------------------------------
- 
-#google_keys = username, first_name, last_name, domain, admin, aliases
-#roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified
-
-
-#puts userA.select{|entry| entry["roster_modified"].to_i < entry["last_modified"].to_i }.length
-#puts userA.length
-
-#puts userA[0]["netid"]
-#puts googleA[0]["username"]
-
-# Todo
-# X  load the db
-# X  read in all the accounts
-# X  load the other db..... ,unsure,
-#   diff the two entries based on timestamp
-#        push entry into queue if diff
-
-# Find users in statedb that need updating, that is their information in the ldap side doesn't match the information
-# on the google side)
-# accounts.each do |entry|
-#    puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.debug
-#    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
-#       if $output.nil?
-#          $queue << entry
-#       else
-#          $output << ["#{entry.montanaEduPersonID}", "#{entry.givenname}", "#{entry.sn}", "#{random_password}"]
-#       end
-#    end
-# end
-
-# puts "There are #{$queue.length} users to process this time."
-
-# # Create the Google Apps user and objects
-# user = config["apps"]["user"]+"@"+config["apps"]["domain"]
-# puts "Creating Apps Account Endpoint for #{user}." if $options.verbose
-# apps = GData::GApps.new(user, config["apps"]["password"])
-#
-# # Create an array to store worker threads.
-# workers = []
-#
-# # Exit if an exception occurs in a thread.
-# Thread.abort_on_exception = true
-#
-# $chunk_size = $queue.length / $options.threads
-#
-# $options.threads.times do |n|
-#    workers[n] = Thread.new do
-#       my_id = n
-#       # Take work out of global queue
-#       my_start = my_id * $chunk_size
-#       my_end = (my_start + $chunk_size) - 1
-#       puts "Thread #{Thread.current} ID: #{my_id} Start: #{my_start} Stop: #{my_end}" if $options.debug
-#       (my_start..my_end).each do |index|
-#          entry = $queue[index]
-#          if create_and_update_user(apps, entry, config)
-#             state_db.push_update(entry.uniqueIdentifier)
-#          end
-#       end
-#       puts "Thread #{my_id} exiting." if $options.debug
-#       Thread.exit
-#    end
-# end
-#
-# # Wait for workers to finish
-# workers.each { |w| w.join }
-# workers = []
-#
-# print "After worker threads have exited, processing leftovers..." if $options.debug
-#
-# # do the remaining entries that were left over as a result of uneven workloads
-# leftovers_start = $options.threads * $chunk_size
-# leftovers_end = $queue.length - 1
-# left_overs_length = leftovers_end - leftovers_start
-# if left_overs_length > 0
-#   puts "Left Overs: #{left_overs_length} Start: #{leftovers_start} Stop: #{leftovers_end}"
-#   (leftovers_start..leftovers_end).each do |index|
-#      workers[index] = Thread.new do
-#         my_id = index
-#         puts "Thread #{Thread.current} ID: #{my_id}" if $options.debug
-#         entry = $queue[index]
-#         #  puts "Entry: #{entry.inspect} #{entry.class}"
-#         if create_and_update_user(apps, entry, config)
-#            state_db.push_update(entry.uniqueIdentifier)
-#         end
-#         puts "Thread #{my_id} exiting." if $options.debug
-#         Thread.exit
-#      end
-#   end
-#   workers.each {|w| w.join if ! w.nil? }
-#   print "done.\n" if $options.debug
-# end
-#
