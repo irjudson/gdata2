@@ -196,14 +196,14 @@ class State
       else
         last_name = entry.sn
       end
-      first_name.gsub!('\'', '\\\'')
-      last_name.gsub!('\'', '\\\'')
+      first_name = first_name.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '')
+      last_name  = last_name.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '')
 
       if ! exists?(entry.uniqueIdentifier)
         begin
             puts "Inserting #{entry.dn} with TS: #{ts}" if verbose
             puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')" if verbose
-            @db.execute("INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')")
+            @db.execute("INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', \"#{first_name}\", \"#{last_name}\", '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')")
         rescue SQLite3::SQLException => e
             puts "Exception inserting data in db ", e
             puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')"
@@ -211,7 +211,7 @@ class State
       else
         begin
           puts "Updating #{entry.dn} with TS: #{ts}" if verbose
-          @db.execute("UPDATE users SET created = '#{entry.createTimestamp}', last_modified = '#{entry.modifyTimestamp}', roster_modified = '#{ts}', netid = '#{username}', first = '#{first_name}', last = '#{last_name}', first_last = '#{uid_alias}', bz = '#{bz}', bl = '#{bl}', gf = '#{gf}', hv = '#{hv}', forward = '#{forward.join(",")}', google = '#{google}' WHERE idx = '#{entry.uniqueIdentifier}'")
+          @db.execute("UPDATE users SET created = '#{entry.createTimestamp}', last_modified = '#{entry.modifyTimestamp}', roster_modified = '#{ts}', netid = '#{username}', first = \"#{first_name}\", last = \"#{last_name}\", first_last = '#{uid_alias}', bz = '#{bz}', bl = '#{bl}', gf = '#{gf}', hv = '#{hv}', forward = '#{forward.join(",")}', google = '#{google}' WHERE idx = '#{entry.uniqueIdentifier}'")
         rescue SQLite3::SQLException => e
           puts "Exception updating data in db ", e
           puts "QUERY: "+"UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}'"
