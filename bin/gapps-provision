@@ -254,6 +254,7 @@ def refresh_absent_keys(absent_google_keys, apps, state_db)
   #puts really_absent.join(', ')
   return really_absent
 end
+
 def find_changed(google_table, user_table)
   changed = []
 
@@ -261,6 +262,7 @@ def find_changed(google_table, user_table)
     if google_table[key]
       if user_table[key]["last"] != google_table[key]["last_name"] or
            user_table[key]["first"] != google_table[key]["first_name"]
+        STDERR.puts "Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}"
         changed << key
       end
     end
@@ -399,7 +401,9 @@ state_db.google { |goog| googleA = goog }
 #--
 # for each domain we have check and see if they are present in the db and if so refresh them
 #
-total = []
+#i really should roll this all into a class
+total_new     = []
+total_changed = []
 
 apps.each {  |app|
 
@@ -428,17 +432,23 @@ apps.each {  |app|
     pretty_print(not_found + changed,5)
     STDERR.puts "****"
   end
-  total += not_found + changed
+
+  total_changed = total_changed + changed
+  total_new = total_new + not_found
+
 }
-
-puts total.length
-
-#google_keys = username, first_name, last_name, domain, admin, aliases
-#roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified
+# ijust realized that if you are changed you might need to work across
+# each app and changed each last name and/or first name 
+puts "Needs Created: #{total_new.length}"
+puts "Needs Changed: #{total_changed.length}"
 
 
 state_db.close
 # --------------------------------------------------
+ 
+#google_keys = username, first_name, last_name, domain, admin, aliases
+#roster keys = bl,bz,created,first,first_last,forward,gf,google,hv,idx,last,last_modified,netid,roster_modified
+
 
 #puts userA.select{|entry| entry["roster_modified"].to_i < entry["last_modified"].to_i }.length
 #puts userA.length
