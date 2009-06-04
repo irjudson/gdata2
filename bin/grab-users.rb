@@ -101,7 +101,10 @@ end
 
 # Create a local state store for keeping track of things between runs
 state_db = State.new($config["state"]["file"])
-state_db.reset if $options.reset
+
+state_db.reset_source if $options.reset
+state_db.init_source if $options.reset
+ 
 
 # Get the right timestamp to compare against for retrieving users from source data
 ts = state_db.timestamp
