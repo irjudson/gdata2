@@ -247,12 +247,8 @@ def find_changed(google_table, user_table)
   user_table.keys.each do |key|
     if google_table[key]
       if user_table[key]["last"] != google_table[key]["last_name"] or
-           user_table[key]["first"] != google_table[key]["first_name"]
-<<<<<<< HEAD:bin/gapps-provision
+          user_table[key]["first"] != google_table[key]["first_name"]
         STDERR.puts "*CHANGED* First: #{user_table[key]["first"]} Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}" if $options.debug
-=======
-        puts "*CHANGED* First: #{user_table[key]["first"]} Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}"
->>>>>>> working:bin/gapps-provision
         changed << key
       end
     end
@@ -379,7 +375,7 @@ if $options.reset
 
   apps.each { |app|
     users = app.provision.retrieve_all_users
-
+ 
     users.each_with_index do |user,i|
       puts Time.now if (i % 5 == 0) && $options.debug
       nicks = app.provision.retrieve_nicknames(user.username)
@@ -413,7 +409,6 @@ apps.each {  |app|
 
   # not_found = find_new(google_table, user_table, app, state_db)
 
-<<<<<<< HEAD:bin/gapps-provision
   # if $options.debug
   #   STDERR.puts "** Users that still requiring provisioning : "
   #   pretty_print(not_found.map { |key|
@@ -421,15 +416,6 @@ apps.each {  |app|
   #                }, 5)
   #   STDERR.puts "****"
   # end
-=======
-  if $options.debug
-    STDERR.puts "** Users that still requiring provisioning : "
-    pretty_print(not_found.map { |key|
-                   user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
-                 }, 5)
-    STDERR.puts "****"
-  end
->>>>>>> working:bin/gapps-provision
 
   changed = find_changed(google_table, user_table)
 
@@ -444,14 +430,8 @@ apps.each {  |app|
 
 }
 
-<<<<<<< HEAD:bin/gapps-provision
-# ijust realized that if you are changed you might need to work across
-# each app and changed each last name and/or first name
-=======
->>>>>>> working:bin/gapps-provision
 puts "Needs Created: #{total_new.length}"
 pretty_print(total_new, 5)
-<<<<<<< HEAD:bin/gapps-provision
 
 puts "Needs Changed: #{total_changed.length}"
 pretty_print(total_changed, 5)
@@ -467,18 +447,12 @@ apps.each do |app|
       puts google_table[change]["first_name"] +" "+ google_table[change]["last_name"]
     end
   end
-=======
->>>>>>> working:bin/gapps-provision
-
-<<<<<<< HEAD:bin/gapps-provision
 end
-=======
+
 puts "Needs Changed: #{total_changed.length}"
 pretty_print(total_changed, 5)
->>>>>>> working:bin/gapps-provision
 
-<<<<<<< HEAD:bin/gapps-provision
-=======
+
 # apps.each do |app|
 #     total_changed.each do |change|
 #     #puts 'apps.provision.update_user(key,user_table[key]["first"], user_table[key]["last"]'
@@ -488,6 +462,6 @@ pretty_print(total_changed, 5)
 #   end
 # end
 
->>>>>>> working:bin/gapps-provision
+
 state_db.close
 # --------------------------------------------------
