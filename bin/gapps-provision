@@ -124,9 +124,11 @@ def add_alias(apps,username,nickname)
 end
 
 def send_as_alias(app,config, userH)
-  if config['apps']['domain'] != config['apps']['maildomain']
+  first = userH["first_name"]
+  last = userH["last_name"]
+  if config['domains'][app.domain]['domain'] != config['domains'][app.domain]['maildomain']
     send_as_name = "#{first} #{last}"
-    send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
+    send_as_alias = "#{nickname}@#{config['domains'][app.domain]['maildomain']}"
     begin
       # Add the email address they're used to seeing
       puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
@@ -412,20 +414,6 @@ apps.each do |app|
     end
   end
 end
-
-puts "Needs Changed: #{total_changed.length}"
-pretty_print(total_changed, 5)
-
-
-# apps.each do |app|
-#     total_changed.each do |change|
-#     #puts 'apps.provision.update_user(key,user_table[key]["first"], user_table[key]["last"]'
-
-#     puts user_table[change][ config["domain"][app.domain]["db_key"] ]
-
-#   end
-# end
-
 
 state_db.close
 # --------------------------------------------------
