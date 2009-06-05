@@ -1,0 +1,188 @@
+
+lib/gdata/apps/email.rb,1604
+module GData #:nodoc:GData4,40
+   module Apps #:nodoc:Apps5,62
+      class EmailEmail6,86
+         def initialize(apps)initialize7,104
+         def create_label(username, label)create_label12,201
+         def create_filter(username)create_filter18,416
+         def create_send_as(username, name, address, reply_to=nil, make_default=false)create_send_as25,655
+         def update_webclip(username, enabled)update_webclip34,1052
+         def update_forward(username, forward_to, action="KEEP", enable=true)update_forward41,1329
+         def update_pop(username, enable=true, enable_for="ALL_MAIL", action="KEEP")update_pop49,1726
+         def update_imap(username, enable=true)update_imap53,1863
+         def update_vacation_settings(username, enable=false, subject="On Vacation", message="I'm off campus.", contacts_only=true)update_vacation_settings57,1963
+         def update_signature(username, sig="")update_signature61,2147
+         def update_language(username, lang="en-US")update_language65,2247
+         def update_general_settings(username, page_size="50", shortcuts=true, arrows=true, snippets=true, unicode=true)update_general_settings69,2352
+         def setup_actionssetup_actions77,2645
+      class EmailMessage < RequestMessage #:nodoc:EmailMessage98,3986
+         def initializeinitialize100,4098
+         def create_send_as(name, address, replyTo=nil, makeDefault=false)create_send_as104,4154
+         def about_webclip(true_false)about_webclip115,4784
+         def update_forward(destination, enabled=true, action="KEEP")update_forward119,4955
+
+lib/gdata/apps/provisioning.rb,2683
+module GData #:nodoc:GData6,176
+  module Apps #:nodoc:Apps7,198
+    class ProvisioningProvisioning46,1670
+      def initialize(apps)initialize66,2365
+      def create_user(username, given_name, family_name, password, passwd_hash_function=nil, quota=nil)create_user82,3218
+      def retrieve_user(username)retrieve_user99,4097
+      def retrieve_all_usersretrieve_all_users113,4828
+      def retrieve_page_of_users(start_username)retrieve_page_of_users125,5448
+      def update_user(username, given_name, family_name, password=nil, passwd_hash_function=nil, admin=nil, suspended=nil, changepasswd=nil, quota=nil)update_user146,6912
+      def delete_user(username)delete_user160,7693
+      def create_nickname(username, nickname)create_nickname168,8098
+      def retrieve_nickname(nickname)retrieve_nickname182,8759
+      def retrieve_nicknames(username)retrieve_nicknames193,9298
+      def retrieve_all_nicknamesretrieve_all_nicknames205,9963
+      def delete_nickname(nickname)delete_nickname215,10491
+      def retrieve_page_of_nicknames(start_nickname)retrieve_page_of_nicknames225,10961
+      def create_groupcreate_group231,11241
+      def update_groupupdate_group235,11309
+      def retrieve_groupretrieve_group239,11377
+      def delete_groupdelete_group243,11447
+      def add_member_to_groupadd_member_to_group247,11515
+      def retrieve_members_of_groupretrieve_members_of_group251,11590
+      def remove_member_from_groupremove_member_from_group255,11671
+      def add_owner_to_groupadd_owner_to_group259,11751
+      def retrieve_owner_of_groupretrieve_owner_of_group263,11825
+      def remove_owner_from_groupremove_owner_from_group267,11904
+      def setup_actionssetup_actions275,12094
+      def add_next_feeds(current_feed, xml_content, element_class)add_next_feeds303,14073
+    class UserEntryUserEntry330,15147
+      def initialize(entry) #:nodoc:initialize334,15399
+      def to_sto_s346,16158
+    class NicknameEntryNicknameEntry362,16577
+      def initialize(entry) #:nodoc:initialize366,16717
+      def to_sto_s376,17077
+    class Feed < Array #:nodoc:Feed383,17362
+      def initialize(xml_feed, element_class)initialize388,17668
+    class ProvisioningMessage < GData::RequestMessage #:nodoc:ProvisioningMessage395,17873
+      def initializeinitialize396,17936
+      def about_login(user_name, passwd=nil, hash_function_name=nil, admin=nil, suspended=nil, change_passwd_at_next_login=nil)about_login405,18526
+      def about_quota(limit)about_quota418,19559
+      def about_name(family_name, given_name)about_name424,19747
+      def about_nickname(name)about_nickname430,19993
+
+lib/gdata/apps.rb,476
+module GData #:nodoc:GData11,266
+  class GAppsGApps12,288
+    def initialize(user, passwd, proxy=nil, proxy_port=nil, proxy_user=nil, proxy_passwd=nil)initialize39,1498
+    def recreate_connectionrecreate_connection57,2325
+    def register_action(method, action)register_action60,2362
+    def login(mail, passwd)login69,2579
+    def request(action, value=nil, message=nil, headers=@headers)request79,3141
+    def parse_response(response)parse_response110,4343
+
+lib/gdata/messages.rb,172
+module GData #:nodoc:GData4,40
+  class RequestMessage < Document #:nodoc:RequestMessage5,62
+     def initializeinitialize7,162
+     def add_path(url)add_path14,507
+
+lib/gdata/statedb.rb,859
+class StateState6,80
+   def initialize(fn, timestamp="19700000000000Z", verb=false)initialize9,129
+   def init_googleinit_google30,609
+   def init_sourceinit_source38,1832
+   def do_initializationdo_initialization43,2147
+   def reset_sourcereset_source49,2266
+   def reset_googlereset_google60,2461
+   def resetreset71,2664
+   def usersusers87,3002
+   def googlegoogle98,3197
+   def google_aliasesgoogle_aliases111,3453
+   def show_usersshow_users125,3726
+   def update_timestampupdate_timestamp136,3972
+   def count_userscount_users143,4178
+   def exists?(entry)exists?150,4317
+   def update(entry, username, uid_alias, email_addr=nil, ts=nil)update163,4688
+    def update_google(uname, fname, lname, domain, admin, aliases)update_google222,8449
+   def check(entry, source_stamp)check251,9878
+   def closeclose264,10217
+
+lib/gdata.rb,303
+module GData #:nodoc:GData4,154
+  class ConnectionConnection8,215
+    def initialize(host, port, proxy=nil, proxy_port=nil, proxy_user=nil, proxy_passwd=nil)initialize12,317
+    def perform(method, path='', body=nil, header=nil)perform25,838
+  class GDataError < RuntimeErrorGDataError55,1714
+
+lib/timestamp.rb,136
+  def time_distance_or_time_stamp(time = nil, options = {})time_distance_or_time_stamp6,285
+  def time_stamp(time)time_stamp30,1458
+
+bin/#gapps-provision#,932
+def pretty_print(list,num)pretty_print31,466
+def random_password(size = 12)random_password38,628
+def create_usercreate_user48,938
+def update_password(username, first, last, app)update_password72,1674
+def add_alias(apps,username,nickname)add_alias100,2556
+def create_forwardcreate_forward127,3496
+def send_as_alias(app,config, userH)send_as_alias163,4607
+def create_and_update_user(apps, entry, config)create_and_update_user192,5753
+def convert_time(stime)convert_time216,6255
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys223,6385
+def find_changed(google_table, user_table)find_changed245,6952
+def update(google_table, user_table, app, state_db)update260,7434
+def find_new(google_table, user_table, app, state_db) # ireally need to just make a classs as much as i pass around these tablesfind_new272,7761
+def user_hash_data(app,userA,googleA,config)user_hash_data280,8005
+
+bin/check_user.rb,0
+
+bin/gapps-provision,932
+def pretty_print(list,num)pretty_print31,466
+def random_password(size = 12)random_password38,628
+def create_usercreate_user48,938
+def update_password(username, first, last, app)update_password72,1674
+def add_alias(apps,username,nickname)add_alias100,2556
+def create_forwardcreate_forward127,3496
+def send_as_alias(app,config, userH)send_as_alias163,4607
+def create_and_update_user(apps, entry, config)create_and_update_user192,5753
+def convert_time(stime)convert_time216,6255
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys223,6385
+def find_changed(google_table, user_table)find_changed245,6952
+def update(google_table, user_table, app, state_db)update260,7434
+def find_new(google_table, user_table, app, state_db) # ireally need to just make a classs as much as i pass around these tablesfind_new272,7761
+def user_hash_data(app,userA,googleA,config)user_hash_data280,8005
+
+bin/get_users.rb,543
+class StateState18,308
+   def initialize(fn, timestamp="19700000000000Z")initialize21,347
+   def do_initializationdo_initialization40,764
+   def resetreset46,1147
+   def show_usersshow_users53,1327
+   def update_timestampupdate_timestamp64,1573
+   def count_userscount_users71,1779
+   def exists?(entry)exists?78,1918
+   def update(entry, ts=nil)update91,2289
+   def check(entry, source_stamp)check150,5964
+   def closeclose163,6303
+def get_mail(entry)get_mail168,6343
+def parse_uids(uid_array, dn)parse_uids180,6536
+
+bin/grab-users.rb,84
+def get_mail(entry)get_mail23,391
+def parse_uids(uid_array, dn)parse_uids36,626
+
+bin/sync-google-apps,813
+class StateState26,369
+   def initialize(fn, timestamp="19700000000000Z")initialize29,408
+   def do_initializationdo_initialization54,981
+   def resetreset60,1256
+   def show_usersshow_users67,1436
+   def update_timestampupdate_timestamp78,1682
+   def count_userscount_users85,1888
+   def exists?(entry)exists?92,2027
+   def push_update(entry)push_update104,2348
+   def process_updatesprocess_updates108,2453
+   def update(entry, ts=nil)update119,2800
+   def check(entry, source_stamp)check133,3337
+   def stopstop146,3675
+   def closeclose150,3721
+def random_password(size = 12)random_password155,3761
+def parse_uids(uid_array, dn)parse_uids162,3994
+def create_and_update_user(apps, entry, config)create_and_update_user179,4302
+def print_user(entry, config)print_user331,9460
