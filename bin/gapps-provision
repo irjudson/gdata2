@@ -123,7 +123,7 @@ def add_alias(apps,username,nickname)
   end
 end
 
-def send_as_alias(app,config, userH)
+def sendas_alias(app,config, userH)
   first = userH["first_name"]
   last = userH["last_name"]
   if config['domains'][app.domain]['domain'] != config['domains'][app.domain]['maildomain']
@@ -131,7 +131,7 @@ def send_as_alias(app,config, userH)
     send_as_alias = "#{nickname}@#{config['domains'][app.domain]['maildomain']}"
     begin
       # Add the email address they're used to seeing
-      puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
+      puts "    Adding sendas_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
       #the last argument(true)  means it's now the default
       result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
       puts "Result: #{result}" if $options.debug
@@ -153,30 +153,6 @@ def send_as_alias(app,config, userH)
     end
   end
 end
-
-def create_and_update_user(apps, entry, config)
-   uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
-   username = uid_dn
-   first = entry.givenname
-   last = entry.sn
-   password = random_password
-   nickname = uid_alias
-   update = false
-
-
-   #if uid_dn != uid_alias
-
-
-   $sync.synchronize {
-      $count += 1
-   }
-   if (($count % 100) == 0)
-      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
-   end
-
-   return update
-end # /end create_and_update_user
-
 
 def convert_time(stime)
 
@@ -361,6 +337,8 @@ state_db.users {|user| userA << user}
 state_db.google { |goog| googleA = goog }
 
 #--
+# * check for new and changed users *
+#
 # for each domain we have check and see if they are present in the db and if so refresh them
 #
 #i really should roll this all into a class
@@ -402,6 +380,9 @@ pretty_print(total_new, 5)
 puts "Needs Changed: #{total_changed.length}"
 pretty_print(total_changed, 5)
 
+# -------------------------
+# * update / create the users
+
 apps.each do |app|
 
   (user_table, google_table) = user_hash_data(app,userA, googleA,config)
@@ -413,6 +394,8 @@ apps.each do |app|
       puts google_table[change]["first_name"] +" "+ google_table[change]["last_name"]
     end
   end
+
+
 end
 
 state_db.close
