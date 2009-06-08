@@ -124,8 +124,8 @@ def add_alias(apps,username,nickname)
 end
 
 def sendas_alias(app,config, userH)
-  first = userH["first_name"]
-  last = userH["last_name"]
+  first = userH["first"] #these should be the roster columns not the google ones
+  last = userH["last"]
   if config['domains'][app.domain]['domain'] != config['domains'][app.domain]['maildomain']
     send_as_name = "#{first} #{last}"
     send_as_alias = "#{nickname}@#{config['domains'][app.domain]['maildomain']}"
@@ -385,15 +385,17 @@ pretty_print(total_changed, 5)
 
 apps.each do |app|
 
-  (user_table, google_table) = user_hash_data(app,userA, googleA,config)
+  (user_table, google_table) = user_hash_data(app, userA, googleA, config)
 
   total_changed.each do |change|
     if user_table[change]
-      #danger- #puts 'apps.provision.update_user(key,user_table[key]["first"], user_table[key]["last"]'
-      puts user_table[change]["first"] +" "+ user_table[change]["last"]
-      puts google_table[change]["first_name"] +" "+ google_table[change]["last_name"]
+      puts "app.provision.update_user(#{change},#{user_table[change]["first"]}, #{user_table[change]["last"]})"
+      puts "add_alias(apps, #{change}, #{user_table[change]["first"].downcase}.#{user_table[change]["last"].downcase })" #can't use first_last it's wrong
+      puts "sendas_alias(app, config, user_table[change])"
+      STDERR.puts "roster: " + user_table[change]["first"] +" "+ user_table[change]["last"] if $options.debug
+      STDERR.puts "google: " + google_table[change]["first_name"] +" "+ google_table[change]["last_name"] if $options.debug
     end
-  end
+  end if total_changed
 
 
 end
