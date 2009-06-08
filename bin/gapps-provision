@@ -351,15 +351,15 @@ apps.each {  |app|
 
   STDERR.puts "Users for #{app.domain} - #{user_table.keys.length}"  if $options.debug
 
-  # not_found = find_new(google_table, user_table, app, state_db)
+  not_found = find_new(google_table, user_table, app, state_db)
 
-  # if $options.debug
-  #   STDERR.puts "** Users that still requiring provisioning : "
-  #   pretty_print(not_found.map { |key|
-  #                  user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
-  #                }, 5)
-  #   STDERR.puts "****"
-  # end
+  if $options.debug
+    STDERR.puts "** Users that still requiring provisioning : "
+    pretty_print(not_found.map { |key|
+                   user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
+                 }, 5)
+    STDERR.puts "****"
+  end
 
   changed = find_changed(google_table, user_table)
 
@@ -370,7 +370,7 @@ apps.each {  |app|
   end
 
   total_changed = total_changed + changed
-#  total_new = total_new + not_found
+  total_new = total_new + not_found
 
 }
 
@@ -397,6 +397,14 @@ apps.each do |app|
     end
   end if total_changed
 
+  total_new.each do |key|
+    puts user_table[key]
+    puts "create_user(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]}, app)"
+    puts "disable_password_reset(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]}, app)"
+    puts "app.provision.update_user(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]})"
+    puts "add_alias(apps, #{key}, #{user_table[key]["first"].downcase}.#{user_table[key]["last"].downcase })" #can't use first_last it's wrong
+    puts "sendas_alias(app, config, user_table[key])"
+  end if total_new
 
 end
 
