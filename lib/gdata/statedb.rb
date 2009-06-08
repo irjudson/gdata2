@@ -233,6 +233,7 @@ class State
             STDERR.puts "Username not unique: #{uname} #{first_name} #{last_name} - #{domain}"
           else
             STDERR.puts "Exception inserting google user in db #{ e } - #{uname}"
+             STDERR.puts "** Statement was: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
           end
         end
       end
