@@ -24,6 +24,21 @@ $count = 0
 $forward_domains = Hash.new
 
 # --------------------------------------------------
+#-- overloading Array
+
+class Array
+  def / len
+    a = []
+    each_with_index do |x,i|
+      a << [] if i % len == 0
+      a.last << x
+    end
+    a
+  end
+end #allows for Array / 3 and get back chunks of 3
+# --------------------------------------------------
+
+# --------------------------------------------------
 # functions
 
 #print the list num wide
@@ -315,16 +330,29 @@ if $options.reset
   end
   puts "init took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
 
-  apps.each { |app|
+  apps.each do |app|
     users = app.provision.retrieve_all_users
+    STDERR.puts "Finished retrieving the users for #{app.domain} -- " if $options.debug
 
-    users.each_with_index do |user,i|
-      STDERR.puts i.to_f / users.length if (i % 5 == 0) && $options.debug
-      nicks = app.provision.retrieve_nicknames(user.username)
-      na = nicks.map{ |n| n.nickname }
-      state_db.update_google(user.username, user.given_name, user.family_name, app.domain, user.admin, na)
+    workers = []
+    queue = users / $options.threads #split the array into chunks of thread length
+
+    queue.each_with_index do |users,k|
+      users.each_with_index do |user,i|
+        workers[i] = Thread.new do
+          #STDERR.puts (i.to_f / users.length) if $options.debug
+          STDERR.puts user.username if $options.debug
+          nicks = app.provision.retrieve_nicknames(user.username)
+          na = nicks.map{ |n| n.nickname }
+          state_db.update_google(user.username, user.given_name, user.family_name, app.domain, user.admin, na)
+          STDERR.puts "Thread #{i} exiting" if $options.debug
+          Thread.exit
+        end
+      end
+      workers.each { |w| w.join}
+      STDERR.puts(100 * k.to_f / queue.length.to_f).to_s + "%" if $options.debug
     end
-  }
+  end
 
 end #resetting/creating the db
 
