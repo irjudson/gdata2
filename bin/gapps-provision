@@ -319,7 +319,7 @@ if $options.reset
     users = app.provision.retrieve_all_users
 
     users.each_with_index do |user,i|
-      puts Time.now if (i % 5 == 0) && $options.debug
+      STDERR.puts i.to_f / users.length if (i % 5 == 0) && $options.debug
       nicks = app.provision.retrieve_nicknames(user.username)
       na = nicks.map{ |n| n.nickname }
       state_db.update_google(user.username, user.given_name, user.family_name, app.domain, user.admin, na)
