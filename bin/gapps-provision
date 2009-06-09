@@ -377,21 +377,28 @@ state_db.google { |goog| googleA = goog }
 date = convert_time(state_db.timestamp.to_s) #when did we last google provision
 date = 0 if $options.reset # everyone needs to be included
 
-googleH = googleA.inject({}){|h, item| h[item["username"]] = item }
+googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
 
-
+# these are all the users that have never been apportioned accourding
+# to our database
 total_new = userA.select do |user|
- googleH[user["netid"]] == nil
+  googleH[user["netid"]] == nil
 end
-
+date = 0 #testing
+# first we limit to those things that have been altered in roster since
+# we last had a running of provisioner
 total_changed = userA.select do |user|
   last_modified = convert_time(user["last_modified"])
   date  < last_modified
 end
+
+# now we check and see if they have 'changed' accourding to our rules
 total_changed = total_changed.select do |user|
-  changed?(googleH[user["netid"]],user)
+  is_changed(googleH[user["netid"]],user)
 end
-puts total_new[0..10], total_changed.length
+
+
+puts total_new.length, total_changed.length
 
 exit
 # this should be filtered to make sure the changes
