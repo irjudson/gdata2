@@ -169,6 +169,8 @@ def sendas_alias(app,config, userH)
   end
 end
 
+#--
+# get the time converted into a Time class
 def convert_time(stime)
 
   stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
@@ -372,6 +374,13 @@ googleA = Array.new
 
 state_db.users {|user| userA << user}
 state_db.google { |goog| googleA = goog }
+date = convert_time(state_db.timestamp.to_s) #when did we last google provision
+date = 0 if $options.reset # everyone needs to be included
+
+userA = userA.select do |user|
+  last_modified = convert_time(user["last_modified"])
+  date  < last_modified
+end
 
 #--
 # * check for new and changed users *
@@ -386,28 +395,28 @@ apps.each {  |app|
 
   (user_table, google_table) = user_hash_data(app,userA, googleA,config)
 
-  STDERR.puts "Users for #{app.domain} - #{user_table.keys.length}"  if $options.debug
+  STDERR.puts "Users updated since #{state_db.timestamp} for #{app.domain} - #{user_table.keys.length}"  if $options.debug
 
-  not_found = find_new(google_table, user_table, app, state_db)
+  # not_found = find_new(google_table, user_table, app, state_db)
 
-  if $options.debug
-    STDERR.puts "** Users that still requiring provisioning : "
-    pretty_print(not_found.map { |key|
-                   user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
-                 }, 5)
-    STDERR.puts "****"
-  end
+  # if $options.debug
+  #   STDERR.puts "** Users that still requiring provisioning : "
+  #   pretty_print(not_found.map { |key|
+  #                  user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
+  #                }, 5)
+  #   STDERR.puts "****"
+  # end
 
   changed = find_changed(google_table, user_table)
 
-  if $options.debug
-    STDERR.puts "Total New/Changed Actionable Entries: #{changed.length}"
-    pretty_print(not_found + changed,5)
-    STDERR.puts "****"
-  end
+  # if $options.debug
+  #   STDERR.puts "Total New/Changed Actionable Entries: #{changed.length}"
+  #   pretty_print(not_found + changed,5)
+  #   STDERR.puts "****"
+  # end
 
   total_changed = total_changed + changed
-  total_new = total_new + not_found
+#  total_new = total_new + not_found
 
 }
 
@@ -448,6 +457,7 @@ end
 #
 # -------------------------
 
+state_db.update_timestamp
 state_db.close
 # --------------------------------------------------
 
