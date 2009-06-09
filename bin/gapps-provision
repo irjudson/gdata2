@@ -208,19 +208,14 @@ def refresh_absent_keys(absent_google_keys, apps, state_db)
   return really_absent
 end
 
-def find_changed(google_table, user_table)
-  changed = []
-
-  user_table.keys.each do |key|
-    if google_table[key]
-      if user_table[key]["last"] != google_table[key]["last_name"] or
-          user_table[key]["first"] != google_table[key]["first_name"]
-        STDERR.puts "*CHANGED* First: #{user_table[key]["first"]} Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}" if $options.debug
-        changed << key
-      end
-    end
+def changed?(google_entry, user_entry)
+  if user_entry["last"] != google_entry["last_name"] or
+      user_entry["first"] != google_entry["first_name"]
+    STDERR.puts "*CHANGED* First: #{user_entry["first"]} Last name: #{user_entry["last"]} #{google_entry["last_name"]}" if $options.debug
+    return true
+  else
+    return false
   end
-  return changed
 end
 
 def update(google_table, user_table, app, state_db)
@@ -374,13 +369,29 @@ googleA = Array.new
 
 state_db.users {|user| userA << user}
 state_db.google { |goog| googleA = goog }
+
 date = convert_time(state_db.timestamp.to_s) #when did we last google provision
 date = 0 if $options.reset # everyone needs to be included
 
-userA = userA.select do |user|
+googleH = googleA.inject({}){|h, item| h[item["username"]] = item }
+
+
+total_new = userA.select do |user|
+ googleH[user["netid"]] == nil
+end
+
+total_changed = userA.select do |user|
   last_modified = convert_time(user["last_modified"])
   date  < last_modified
 end
+total_changed = total_changed.select do |user|
+  changed?(googleH[user["netid"]],user)
+end
+puts total_new[0..10], total_changed.length
+
+exit
+# this should be filtered to make sure the changes
+# are only those of the nature of names
 
 #--
 # * check for new and changed users *
@@ -388,68 +399,62 @@ end
 # for each domain we have check and see if they are present in the db and if so refresh them
 #
 #i really should roll this all into a class
-total_new     = []
-total_changed = []
 
-apps.each {  |app|
 
-  (user_table, google_table) = user_hash_data(app,userA, googleA,config)
+# apps.each {  |app|
 
-  STDERR.puts "Users updated since #{state_db.timestamp} for #{app.domain} - #{user_table.keys.length}"  if $options.debug
+#   (user_table, google_table) = user_hash_data(app,userA, googleA,config)
 
-  # not_found = find_new(google_table, user_table, app, state_db)
+#   STDERR.puts "Users updated since #{state_db.timestamp} for #{app.domain} - #{user_table.keys.length}"  if $options.debug
 
-  # if $options.debug
-  #   STDERR.puts "** Users that still requiring provisioning : "
-  #   pretty_print(not_found.map { |key|
-  #                  user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
-  #                }, 5)
-  #   STDERR.puts "****"
-  # end
+#   # not_found = find_new(google_table, user_table, app, state_db)
 
-  changed = find_changed(google_table, user_table)
+#   # if $options.debug
+#   #   STDERR.puts "** Users that still requiring provisioning : "
+#   #   pretty_print(not_found.map { |key|
+#   #                  user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
+#   #                }, 5)
+#   #   STDERR.puts "****"
+#   # end
 
-  # if $options.debug
-  #   STDERR.puts "Total New/Changed Actionable Entries: #{changed.length}"
-  #   pretty_print(not_found + changed,5)
-  #   STDERR.puts "****"
-  # end
+#   changed = find_changed(google_table, user_table)
 
-  total_changed = total_changed + changed
-#  total_new = total_new + not_found
+#   # if $options.debug
+#   #   STDERR.puts "Total New/Changed Actionable Entries: #{changed.length}"
+#   #   pretty_print(not_found + changed,5)
+#   #   STDERR.puts "****"
+#   # end
 
-}
+#   total_changed = total_changed + changed
+# #  total_new = total_new + not_found
+
+# }
 
 puts "Needs Created: #{total_new.length}"
-pretty_print(total_new, 5)
+pretty_print(total_new.map{ |i| i["netid"]}, 5) if total_new.length < 20
 
 puts "Needs Changed: #{total_changed.length}"
-pretty_print(total_changed, 5)
+pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
 
 # -------------------------
 # * update / create the users
 
 apps.each do |app|
 
-  (user_table, google_table) = user_hash_data(app, userA, googleA, config)
+#  (user_table, google_table) = user_hash_data(app, userA, googleA, config)
 
   total_changed.each do |change|
-    if user_table[change]
-      puts "app.provision.update_user(#{change},#{user_table[change]["first"]}, #{user_table[change]["last"]})"
-      puts "add_alias(apps, #{change}, #{user_table[change]["first"].downcase}.#{user_table[change]["last"].downcase })" #can't use first_last it's wrong
-      puts "sendas_alias(app, config, user_table[change])"
-      STDERR.puts "roster: " + user_table[change]["first"] +" "+ user_table[change]["last"] if $options.debug
-      STDERR.puts "google: " + google_table[change]["first_name"] +" "+ google_table[change]["last_name"] if $options.debug
-    end
+    # **** needs work here
+    print "."
   end if total_changed
 
   total_new.each do |key|
-    puts user_table[key]
-    puts "create_user(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]}, app)"
-    puts "disable_password_reset(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]}, app)"
-    puts "app.provision.update_user(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]})"
-    puts "add_alias(apps, #{key}, #{user_table[key]["first"].downcase}.#{user_table[key]["last"].downcase })" #can't use first_last it's wrong
-    puts "sendas_alias(app, config, user_table[key])"
+    # puts user_table[key]
+     puts "create_user(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
+     puts "disable_password_reset(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
+    # puts "app.provision.update_user(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]})"
+    # puts "add_alias(apps, #{key}, #{user_table[key]["first"].downcase}.#{user_table[key]["last"].downcase })" #can't use first_last it's wrong
+    # puts "sendas_alias(app, config, user_table[key])"
   end if total_new
 
 end
