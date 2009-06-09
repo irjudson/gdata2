@@ -172,10 +172,12 @@ end
 #--
 # get the time converted into a Time class
 def convert_time(stime)
-
-  stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
-  return Time.gm($1,$2,$3,$4,$5,$6).to_i
-
+  if stime
+    stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+    return Time.gm($1,$2,$3,$4,$5,$6).to_i
+  else
+    return 0
+  end
 end
 
 def refresh_absent_keys(absent_google_keys, apps, state_db)
@@ -291,7 +293,7 @@ OptionParser.new do |opts|
       $options.statedbfn = o
    end
 
-   opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 200909271213Z") do |o|
+   opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 200909271213Z, -D w/ nothing is Date = 0") do |o|
       $options.date = convert_time(o)
    end
 
