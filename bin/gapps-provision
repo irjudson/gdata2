@@ -379,6 +379,7 @@ state_db.google { |goog| googleA = goog }
 
 date = convert_time(state_db.timestamp.to_s) #when did we last google provision
 date = 0 if $options.reset # everyone needs to be included
+date = $options.date if $options.date
 
 googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
 
@@ -387,7 +388,9 @@ googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
 total_new = userA.select do |user|
   googleH[user["netid"]] == nil
 end
-date = 0 #testing
+
+
+
 # first we limit to those things that have been altered in roster since
 # we last had a running of provisioner
 total_changed = userA.select do |user|
