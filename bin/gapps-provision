@@ -172,10 +172,14 @@ end
 #--
 # get the time converted into a Time class
 def convert_time(stime)
-  if stime
-    stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
-    return Time.gm($1,$2,$3,$4,$5,$6).to_i
-  else
+  begin
+    if stime
+      stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+      return Time.gm($1,$2,$3,$4,$5,$6).to_i
+    else
+      return 0
+    end
+  rescue
     return 0
   end
 end
