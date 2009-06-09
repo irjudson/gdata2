@@ -293,7 +293,7 @@ OptionParser.new do |opts|
       $options.statedbfn = o
    end
 
-   opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 200909271213Z, -D w/ nothing is Date = 0") do |o|
+   opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 20090927121300Z, -D w/ nothing is Date = 0") do |o|
       $options.date = convert_time(o)
    end
 
