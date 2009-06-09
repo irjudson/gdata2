@@ -265,6 +265,7 @@ OptionParser.new do |opts|
    $options.doit = true
    $options.threads = 1
    $options.forward = false
+  $options.date = false
 
    opts.banner = "Usage: gapps-provision.rb [options]"
 
@@ -290,8 +291,8 @@ OptionParser.new do |opts|
       $options.statedbfn = o
    end
 
-   opts.on("-n", "--not-really", "Don't really perform the operations, just pretend.") do |o|
-      $options.doit = false
+   opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 200909271213Z") do |o|
+      $options.date = convert_time(o)
    end
 
    opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
