@@ -208,11 +208,15 @@ def refresh_absent_keys(absent_google_keys, apps, state_db)
   return really_absent
 end
 
-def changed?(google_entry, user_entry)
-  if user_entry["last"] != google_entry["last_name"] or
-      user_entry["first"] != google_entry["first_name"]
-    STDERR.puts "*CHANGED* First: #{user_entry["first"]} Last name: #{user_entry["last"]} #{google_entry["last_name"]}" if $options.debug
-    return true
+def is_changed(google_entry, user_entry)
+  if  google_entry
+    if user_entry["last"] != google_entry["last_name"] or
+        user_entry["first"] != google_entry["first_name"]
+      STDERR.puts "*CHANGED* First: #{user_entry["first"]} Last name: #{user_entry["last"]} #{google_entry["last_name"]}" if $options.debug
+      return true
+    else
+      return false
+    end
   else
     return false
   end
