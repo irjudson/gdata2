@@ -404,55 +404,36 @@ total_changed = total_changed.select do |user|
   is_changed(googleH[user["netid"]],user)
 end
 
+total_new = total_new.select do |user|
+  dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
 
-puts total_new.length, total_changed.length
+  dbkeys.map{ |campus| user[campus] == "1" }.inject{ |k,i| k | i}
+end
+
+puts  total_new[0]
+
+#-- refresh
+apps.each do |app|
+  potentials = total_new.select do |user|
+      user[ config["domains"][app.domain]["db_key"] ] == "1"
+  end
+  puts potentials.length.to_s + " " + app.domain
+end
+
 
 exit
-# this should be filtered to make sure the changes
-# are only those of the nature of names
-
-#--
-# * check for new and changed users *
-#
-# for each domain we have check and see if they are present in the db and if so refresh them
-#
-#i really should roll this all into a class
-
-
-# apps.each {  |app|
-
-#   (user_table, google_table) = user_hash_data(app,userA, googleA,config)
-
-#   STDERR.puts "Users updated since #{state_db.timestamp} for #{app.domain} - #{user_table.keys.length}"  if $options.debug
-
-#   # not_found = find_new(google_table, user_table, app, state_db)
-
-#   # if $options.debug
-#   #   STDERR.puts "** Users that still requiring provisioning : "
-#   #   pretty_print(not_found.map { |key|
-#   #                  user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
-#   #                }, 5)
-#   #   STDERR.puts "****"
-#   # end
-
-#   changed = find_changed(google_table, user_table)
-
-#   # if $options.debug
-#   #   STDERR.puts "Total New/Changed Actionable Entries: #{changed.length}"
-#   #   pretty_print(not_found + changed,5)
-#   #   STDERR.puts "****"
-#   # end
-
-#   total_changed = total_changed + changed
-# #  total_new = total_new + not_found
-
-# }
-
 puts "Needs Created: #{total_new.length}"
 pretty_print(total_new.map{ |i| i["netid"]}, 5) if total_new.length < 20
 
 puts "Needs Changed: #{total_changed.length}"
 pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
+
+#--
+# check  to see who really is missing
+
+  apps.each do |app|
+
+  end
 
 # -------------------------
 # * update / create the users
