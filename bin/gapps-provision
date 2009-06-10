@@ -404,15 +404,17 @@ total_changed = total_changed.select do |user|
   is_changed(googleH[user["netid"]],user)
 end
 
+#filter out everyone that has absolutely no campus affiliation
 total_new = total_new.select do |user|
   dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
-
+  # 'or' the truth values of campus affilation and then return as a single
+  # value for select to base it's criteria on
   dbkeys.map{ |campus| user[campus] == "1" }.inject{ |k,i| k | i}
 end
 
 puts  total_new[0]
 
-#-- refresh
+#-- refresh the user entries that have affiliation
 apps.each do |app|
   potentials = total_new.select do |user|
       user[ config["domains"][app.domain]["db_key"] ] == "1"
@@ -421,13 +423,14 @@ apps.each do |app|
 end
 
 
-exit
+
 puts "Needs Created: #{total_new.length}"
 pretty_print(total_new.map{ |i| i["netid"]}, 5) if total_new.length < 20
 
 puts "Needs Changed: #{total_changed.length}"
 pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
 
+exit
 #--
 # check  to see who really is missing
 
