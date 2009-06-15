@@ -432,28 +432,15 @@ queue = queue.select {  |unit|
   key = unit[0]["netid"]
   app = unit[1]
 
-#  update_google_user(key,app,state_db)
+#TEMP#  update_google_user(key,app,state_db)
 
 }
 
 puts "Needs Created: #{queue.length}"
 pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 90
 
-queue.each do |unit|
-  key = unit[0]
-  app = unit[1]
-
-  STDERR.puts app.domain
-
-  puts "create_user(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
-  puts "disable_password_reset(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
-  puts "app.provision.update_user(#{key["netid"]},#{key["first"]}, #{key["last"]})"
-  puts "add_alias(app, #{key["netid"]}, #{key["first"].downcase}.#{key["last"].downcase })" #can't use first_last it's wrong
-  puts "sendas_alias(app, config, key)"
-end
-
-queue = queue.select { |unit|
-  unit[0]["netid"] =~ /atgm/
+queue = queue.select { |unit| #neutered the queue
+  unit[0]["netid"] =~ /h47z861/ #me
 }
 
 queue.each do |unit|
@@ -471,10 +458,13 @@ queue.each do |unit|
   update_google_user(key["netid"], app, state_db)
 end
 
-exit
+#clear the queue
+queue = []
+
+
 
 # ---------------------------------------- Alter changed people
-
+puts state_db.timestamp.to_s
 # first we limit to those things that have been altered in roster since
 # we last had a running of provisioner
 total_changed = userA.select do |user|
@@ -482,14 +472,27 @@ total_changed = userA.select do |user|
   date  < last_modified
 end
 
+#filter out, this should be done at the userA level above
+# - NOT - twice
+total_changed = total_changed.select do |user|
+  dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
+  # 'or' the truth values of campus affilation and then return as a single
+  # value for select to base it's criteria on
+  dbkeys.map{ |campus| user[campus] == "1" }.inject{ |k,i| k | i}
+end
+
+puts "Needs Changed: #{total_changed.length}"
+pretty_print(total_changed.map{ |i| i["created"]+i["last_modified"] }, 1) if total_changed.length < 2000
+
+
+exit
+
 # now we check and see if they have 'changed' accourding to our rules
 total_changed = total_changed.select do |user|
   is_changed(googleH[user["netid"]],user)
 end
 
 
-puts "Needs Changed: #{total_changed.length}"
-pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
 
 
 state_db.update_timestamp
