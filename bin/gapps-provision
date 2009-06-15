@@ -215,14 +215,14 @@ def refresh_absent_keys(absent_google_keys, apps, state_db)
 end
 
 def update_google_user(entry, app, statedb)
-  user = apps.provision.retrieve_user(entry)
+  user = app.provision.retrieve_user(entry)
   if user.respond_to? :username
     nicks = app.provision.retrieve_nicknames(user.username)
     if nicks
       na = nicks.map{ |n| n.nickname }
     end
 
-    state_db.update_google(user.username, user.given_name, user.family_name, apps.domain, user.admin, na)
+    state_db.update_google(user.username, user.given_name, user.family_name, app.domain, user.admin, na)
 
     return nil   #they existed upstream, we just hadn't grabbed them
   else
@@ -435,23 +435,23 @@ apps.each do |app|
   potentials = total_new.select do |user|
       user[ config["domains"][app.domain]["db_key"] ] == "1"
   end
-  queue << potentials.map { |user| [user, app] } if potentials.length > 0
+  queue += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
 puts "Needs Created: #{queue.length}"
-pretty_print(queue.map{ |i| i.length}, 5) if queue.length < 20
+pretty_print(queue.map{ |i| i[0]["netid"]}, 5) if queue.length < 20
 
-exit
 #--
 # check to see who really is missing
 
-queue = queue.select do |unit|
-  key = unit[0]
+queue = queue.select {  |unit|
+  key = unit[0]["netid"]
   app = unit[1]
-  if update_google_user(key,app,state_db)
-    [key, app]
-  end
-end
+
+  update_google_user(key,app,state_db)
+
+}
+
 puts queue.length
 
 exit
