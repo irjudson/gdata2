@@ -214,6 +214,22 @@ def refresh_absent_keys(absent_google_keys, apps, state_db)
   return really_absent
 end
 
+def update_google_user(entry, app, statedb)
+  user = apps.provision.retrieve_user(entry)
+  if user.respond_to? :username
+    nicks = app.provision.retrieve_nicknames(user.username)
+    if nicks
+      na = nicks.map{ |n| n.nickname }
+    end
+
+    state_db.update_google(user.username, user.given_name, user.family_name, apps.domain, user.admin, na)
+
+    return nil   #they existed upstream, we just hadn't grabbed them
+  else
+    return entry #they really are absent from upstream
+  end
+end
+
 def is_changed(google_entry, user_entry)
   if  google_entry
     if user_entry["last"] != google_entry["last_name"] or
@@ -412,31 +428,36 @@ total_new = total_new.select do |user|
   dbkeys.map{ |campus| user[campus] == "1" }.inject{ |k,i| k | i}
 end
 
-puts  total_new[0]
-
-#-- refresh the user entries that have affiliation
+#-- map the app to each user so we can just iterate through it
+# - create a tuple to queue.each over
+queue = []
 apps.each do |app|
   potentials = total_new.select do |user|
       user[ config["domains"][app.domain]["db_key"] ] == "1"
   end
-  puts potentials.length.to_s + " " + app.domain
+  queue << potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-
-
-puts "Needs Created: #{total_new.length}"
-pretty_print(total_new.map{ |i| i["netid"]}, 5) if total_new.length < 20
-
-puts "Needs Changed: #{total_changed.length}"
-pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
+puts "Needs Created: #{queue.length}"
+pretty_print(queue.map{ |i| i.length}, 5) if queue.length < 20
 
 exit
 #--
-# check  to see who really is missing
+# check to see who really is missing
 
-  apps.each do |app|
-
+queue = queue.select do |unit|
+  key = unit[0]
+  app = unit[1]
+  if update_google_user(key,app,state_db)
+    [key, app]
   end
+end
+puts queue.length
+
+exit
+
+puts "Needs Changed: #{total_changed.length}"
+pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
 
 # -------------------------
 # * update / create the users
