@@ -104,7 +104,7 @@ state_db = State.new($config["state"]["file"])
 
 state_db.reset_source if $options.reset
 state_db.init_source if $options.reset
- 
+
 
 # Get the right timestamp to compare against for retrieving users from source data
 ts = state_db.timestamp
@@ -151,11 +151,9 @@ puts "There are #{state_db.count_users} users in the state database."
 accounts.each do |entry|
    puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
    if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
-     netid, user = parse_uids(entry.uid, entry.dn)   
+     netid, user = parse_uids(entry.uid, entry.dn)
      state_db.update(entry, netid, user, get_mail(entry))
    end
 end
 
-# Update our local timestamp
-state_db.update_timestamp if not $options.reset
 state_db.close
