@@ -62,54 +62,54 @@ end
 #
 def create_user(username,first,last,app)
   password = random_password
-  puts "#{$count} Creating user #{username}." if $options.verbose
+  STDERR.puts "#{$count} Creating user #{username}." if $options.verbose
+  STDERR.puts "#{$count} Creating user #{username} with password #{password}." if $options.debug
+
   begin
     result = app.provision.create_user(username, first, last, password)
-    puts "Result: #{result}" if $options.debug
+    STDERR.puts "Result: #{result}" if $options.debug
     update = true
   rescue GData::GDataError => e
     if e.code == "1300"
-      puts "  => Create User #{username} exists" if $options.verbose
+      STDERR.puts "  => Create User #{username} exists" if $options.verbose
       update = true
     elsif e.code == "1000"
-      puts "  => Create User #{username} unknown error" if $options.verbose
+      STDERR.puts "  => Create User #{username} unknown error" if $options.verbose
       update = false
       #retry
     else
       puts "Error creating user: #{username}" if $options.verbose
       raise e
     end
-  rescue OpenSSL::SSL::SSLError => e
-    retry
   end
 end
 
 # updates it so they don't have to change their password at next login
-def disable_password_reset(username, first, last, app)
+def disable_password_reset(username, first, last, app,config)
   puts "    Setting password reset to false for |#{username}|." if $options.verbose
-  if config['source']['admins'].include?(nickname)
-    admin = true
-  else
-    admin = false
-  end
+  # need to get the admin setting code put in place NOTENOTENOTE
+  # if config['source']['admins'].include?(nickname)
+  #   admin = true
+  # else
+  #   admin = false
+  # end
+  admin = false
   begin
     result = app.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
-    puts "Result: #{result}" if $options.debug
+    STDERR.puts "Result: #{result}" if $options.debug
     update = true
   rescue GData::GDataError => e
     if e.code == "1300"
-      puts "  => Set password reset to false #{username} exists" if $options.verbose
+      STDERR.puts "  => Set password reset to false #{username} exists" if $options.verbose
       update = true
     elsif e.code == "1000"
-      puts "  => setting password reset to false  #{username} unknown error" if $options.verbose
+      STDERR.puts "  => setting password reset to false  #{username} unknown error" if $options.verbose
       update = false
       #retry
     else
-      puts "Error creating user: #{username}" if $options.verbose
+      STDERR.puts "Error creating user: #{username}" if $options.verbose
       raise e
     end
-  rescue OpenSSL::SSL::SSLError => e
-    retry
   end
 end
 
@@ -138,33 +138,33 @@ def add_alias(apps,username,nickname)
   end
 end
 
-def sendas_alias(app,config, userH)
+def sendas_alias(app,config,userH,nickname)
   first = userH["first"] #these should be the roster columns not the google ones
   last = userH["last"]
+  username = userH["netid"]
+
   if config['domains'][app.domain]['domain'] != config['domains'][app.domain]['maildomain']
     send_as_name = "#{first} #{last}"
     send_as_alias = "#{nickname}@#{config['domains'][app.domain]['maildomain']}"
     begin
       # Add the email address they're used to seeing
-      puts "    Adding sendas_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
+      STDERR.puts "    Adding sendas_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
       #the last argument(true)  means it's now the default
-      result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
-      puts "Result: #{result}" if $options.debug
+      result = app.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+      STDERR.puts "Result: #{result}" if $options.debug
        update = true
     rescue GData::GDataError => e
       if e.code == "1300"
-        puts "  => creating send as alias #{send_as_name} for  #{username} exists" if $options.verbose
+        STDERR.puts "  => creating send as alias #{send_as_name} for  #{username} exists" if $options.verbose
         update = true
       elsif e.code == "1000"
-        puts "  => creating send as alias #{send_as_name} for  #{username} uknown error" if $options.verbose
+        STDERR.puts "  => creating send as alias #{send_as_name} for  #{username} uknown error" if $options.verbose
         update = false
         #retry
       else
-        puts "Error creating user: #{username}" if $options.verbose
+        STDERR.puts "Error creating user: #{username}" if $options.verbose
         raise e
       end
-    rescue OpenSSL::SSL::SSLError => e
-      retry
     end
   end
 end
@@ -214,7 +214,7 @@ def refresh_absent_keys(absent_google_keys, apps, state_db)
   return really_absent
 end
 
-def update_google_user(entry, app, statedb)
+def update_google_user(entry, app, state_db)
   user = app.provision.retrieve_user(entry)
   if user.respond_to? :username
     nicks = app.provision.retrieve_nicknames(user.username)
@@ -406,20 +406,6 @@ total_new = userA.select do |user|
   googleH[user["netid"]] == nil
 end
 
-
-
-# first we limit to those things that have been altered in roster since
-# we last had a running of provisioner
-total_changed = userA.select do |user|
-  last_modified = convert_time(user["last_modified"])
-  date  < last_modified
-end
-
-# now we check and see if they have 'changed' accourding to our rules
-total_changed = total_changed.select do |user|
-  is_changed(googleH[user["netid"]],user)
-end
-
 #filter out everyone that has absolutely no campus affiliation
 total_new = total_new.select do |user|
   dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
@@ -438,8 +424,6 @@ apps.each do |app|
   queue += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-puts "Needs Created: #{queue.length}"
-pretty_print(queue.map{ |i| i[0]["netid"]}, 5) if queue.length < 20
 
 #--
 # check to see who really is missing
@@ -448,42 +432,64 @@ queue = queue.select {  |unit|
   key = unit[0]["netid"]
   app = unit[1]
 
-  update_google_user(key,app,state_db)
+#  update_google_user(key,app,state_db)
 
 }
 
-puts queue.length
+puts "Needs Created: #{queue.length}"
+pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 90
+
+queue.each do |unit|
+  key = unit[0]
+  app = unit[1]
+
+  STDERR.puts app.domain
+
+  puts "create_user(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
+  puts "disable_password_reset(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
+  puts "app.provision.update_user(#{key["netid"]},#{key["first"]}, #{key["last"]})"
+  puts "add_alias(app, #{key["netid"]}, #{key["first"].downcase}.#{key["last"].downcase })" #can't use first_last it's wrong
+  puts "sendas_alias(app, config, key)"
+end
+
+queue = queue.select { |unit|
+  unit[0]["netid"] =~ /atgm/
+}
+
+queue.each do |unit|
+  key = unit[0]
+  app = unit[1]
+  #i shouldn't use first_last since it has been wrong in the past
+  nickname =  key["first_last"] #key["first"].downcase+"."+key["last"].downcase
+
+  create_user(key["netid"],key["first"], key["last"], app)
+  disable_password_reset(key["netid"],key["first"], key["last"], app, config)
+  app.provision.update_user(key["netid"],key["first"], key["last"])
+  add_alias(app, key["netid"],nickname )
+  sendas_alias(app, config, key, nickname)
+
+end
 
 exit
+
+# ---------------------------------------- Alter changed people
+
+# first we limit to those things that have been altered in roster since
+# we last had a running of provisioner
+total_changed = userA.select do |user|
+  last_modified = convert_time(user["last_modified"])
+  date  < last_modified
+end
+
+# now we check and see if they have 'changed' accourding to our rules
+total_changed = total_changed.select do |user|
+  is_changed(googleH[user["netid"]],user)
+end
+
 
 puts "Needs Changed: #{total_changed.length}"
 pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 20
 
-# -------------------------
-# * update / create the users
-
-apps.each do |app|
-
-#  (user_table, google_table) = user_hash_data(app, userA, googleA, config)
-
-  total_changed.each do |change|
-    # **** needs work here
-    print "."
-  end if total_changed
-
-  total_new.each do |key|
-    # puts user_table[key]
-     puts "create_user(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
-     puts "disable_password_reset(#{key["netid"]},#{key["first"]}, #{key["last"]}, app)"
-    # puts "app.provision.update_user(#{key},#{user_table[key]["first"]}, #{user_table[key]["last"]})"
-    # puts "add_alias(apps, #{key}, #{user_table[key]["first"].downcase}.#{user_table[key]["last"].downcase })" #can't use first_last it's wrong
-    # puts "sendas_alias(app, config, user_table[key])"
-  end if total_new
-
-end
-
-#
-# -------------------------
 
 state_db.update_timestamp
 state_db.close
