@@ -464,12 +464,21 @@ queue = []
 
 
 # ---------------------------------------- Alter changed people
-puts state_db.timestamp.to_s
-# first we limit to those things that have been altered in roster since
-# we last had a running of provisioner
+ts = date || convert_time(state_db.timestamp.to_s)
+#grab everything that has been modified inside roster since we last ran
+queue = userA.inject([]){ |a,user|
+  i = convert_time(user["roster_modified"])
+  a << user if ts < i && user["created"] != user["last_modified"] ; a
+} #if created is last_modified that *should* mean it is a new entry
+
+puts queue.map{ |u| u["roster_modified"]}.join(",")
+
+exit
+
 total_changed = userA.select do |user|
-  last_modified = convert_time(user["last_modified"])
-  date  < last_modified
+  puts user["roster_modified"]
+  roster_modified = convert_time(user["roster_modified"])
+  date  < roster_modified && (user["created"] != user["last_modified"])
 end
 
 #filter out, this should be done at the userA level above
@@ -482,7 +491,7 @@ total_changed = total_changed.select do |user|
 end
 
 puts "Needs Changed: #{total_changed.length}"
-pretty_print(total_changed.map{ |i| i["created"]+i["last_modified"] }, 1) if total_changed.length < 2000
+pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 200
 
 
 exit
