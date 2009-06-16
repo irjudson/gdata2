@@ -500,10 +500,10 @@ queue.each do |unit|
   nickname =  key["first"].downcase+"."+key["last"].downcase
   puts nickname
 
-  puts <<EOF
+
   add_alias(app, key["netid"],nickname )
   sendas_alias(app, config, key, nickname)
-EOF
+
   #need to update the db now
   update_google_user(key["netid"], app, state_db)
 end
