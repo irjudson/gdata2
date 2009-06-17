@@ -34,6 +34,8 @@ nickname that is their new name or not
 ours
 * Un neuter the creation queue
 * Un neuter the alteration queue
+* enter code for the creation of admin users from the gapps-provision
+file?
 
 Adding more Google Data apis to the bundle.
 # Apps APIs
