@@ -288,8 +288,15 @@ OptionParser.new do |opts|
    $options.threads = 1
    $options.forward = false
   $options.date = false
+  $options.dryrun = false
 
    opts.banner = "Usage: gapps-provision.rb [options]"
+
+  opts.on("-n", "--dryrun", "Just output what would be changed.") do |o|
+    $options.dryrun  = true
+    $options.debug   = true
+    $options.verbose = true
+  end
 
    opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
       $options.reset = true
@@ -347,7 +354,7 @@ if $options.statedbfn.nil?
   $options.statedbfn = config["state"]["file"]
 end
 
-if $options.reset
+if $options.reset && ! $options.dryrun
 
   # Rebuild Google data in statedb from google
   benchmark = Benchmark.realtime do
@@ -440,9 +447,7 @@ puts "Needs Created: #{queue.length}"
 pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 200
 
 
-queue = queue.select { |unit| #neutered the queue to just one person
-  unit[0]["netid"] =~ /fois gras/
-}
+queue = [] if $options.dryrun
 
 queue.each do |unit|
   key = unit[0]
@@ -461,8 +466,6 @@ end
 
 #clear the queue
 queue = []
-
-
 
 # ---------------------------------------- Alter changed people
 
@@ -492,7 +495,7 @@ apps.each do |app|
   queue += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-queue = []
+queue = [] if $options.dryrun
 als = Hash.new
 state_db.google_aliases { |goog| als[goog["alias"]] = goog["g_username"] }
 
@@ -519,9 +522,9 @@ end
 
 
 
-exit
+#exit
 
-state_db.update_timestamp
+state_db.update_timestamp if ! $options.dryrun
 state_db.close
 # --------------------------------------------------
 
