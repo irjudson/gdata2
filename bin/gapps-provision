@@ -432,12 +432,12 @@ queue = queue.select {  |unit|
   key = unit[0]["netid"]
   app = unit[1]
 
-#TEMP#  update_google_user(key,app,state_db)
+  update_google_user(key,app,state_db)
 
 }
 
 puts "Needs Created: #{queue.length}"
-pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 90
+pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 200
 
 
 queue = queue.select { |unit| #neutered the queue to just one person
@@ -492,7 +492,7 @@ apps.each do |app|
   queue += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-
+queue = []
 queue.each do |unit|
   key = unit[0]
   app = unit[1]
