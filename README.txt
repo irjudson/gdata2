@@ -36,6 +36,8 @@ ours
 * Un neuter the alteration queue
 * enter code for the creation of admin users from the gapps-provision
 file?
+* inserts into the google alias table appears to not check and see if
+they already exist
 
 Adding more Google Data apis to the bundle.
 # Apps APIs
