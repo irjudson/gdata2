@@ -25,6 +25,16 @@ You can check out the git repository at http://github.com/<URL>
 
 == TODO:
 
+#Unfinished
+* Detect alterations of people's names correctly, if they have a
+nickname that is their new name or not
+* Document the configuration yml for gapps-provision
+* Set timestamps on the resulting database
+* Turn on detection of users possibly made by other programs other than
+ours
+* Un neuter the creation queue
+* Un neuter the alteration queue
+
 Adding more Google Data apis to the bundle.
 # Apps APIs
 * Provisioning
@@ -45,14 +55,14 @@ TODO: write new
  Copyright 2008-2009 Jérôme Bousquié
  Copyright 2009      Montana State University
 
-Licensed under the Apache License, Version 2.0 (the "License"); 
-you may not use this file except in compliance with the License. 
-You may obtain a copy of the License at 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0 
+	http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software 
-distributed under the License is distributed on an "AS IS" BASIS, 
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-See the License for the specific language governing permissions and 
-limitations under the License. 
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
