@@ -26,12 +26,8 @@ You can check out the git repository at http://github.com/<URL>
 == TODO:
 
 #Unfinished
-* Detect alterations of people's names correctly, if they have a
-nickname that is their new name or not
 * Document the configuration yml for gapps-provision
 * Set timestamps on the resulting database
-* Turn on detection of users possibly made by other programs other than
-ours
 * Un neuter the creation queue
 * Un neuter the alteration queue
 * enter code for the creation of admin users from the gapps-provision
