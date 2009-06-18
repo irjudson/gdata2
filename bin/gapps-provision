@@ -326,8 +326,6 @@ config["domains"].keys.each { |domain|
 
 }
 
-# Create a local state store for keeping track of things between runs
-state_db = State.new($options.statedbfn)
 
 #--------------------------------------------------
 # act on options
@@ -335,6 +333,9 @@ state_db = State.new($options.statedbfn)
 if $options.statedbfn.nil?
   $options.statedbfn = config["state"]["file"]
 end
+
+# Create a local state store for keeping track of things between runs
+state_db = State.new($options.statedbfn)
 
 if $options.reset && ! $options.dryrun
 
