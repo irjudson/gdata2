@@ -230,6 +230,7 @@ def update_google_user(entry, app, state_db)
   end
 end
 
+
 def is_changed(google_entry, user_entry)
   if  google_entry
     if user_entry["last"] != google_entry["last_name"] or
@@ -243,36 +244,6 @@ def is_changed(google_entry, user_entry)
     return false
   end
 end
-
-def update(google_table, user_table, app, state_db)
-  keys = user_table.keys.to_set - google_table.keys.to_set
-  keys = keys.to_a
-
-  if $options.debug
-    STDERR.puts "Total people not listed as provisioned for #{app.domain}: #{keys.length}"
-    STDERR.puts "****"
-  end
-
-  return refresh_absent_keys(keys, app, state_db)
-end
-
-def find_new(google_table, user_table, app, state_db) # ireally need to just make a classs as much as i pass around these tables
-  not_found = []
-  not_found = update(google_table, user_table, app, state_db)
-
-  return not_found
-
-end #find_new
-
-def user_hash_data(app,userA,googleA,config)
-  # select people that are from (app.domain db_key) (apps' domain)
-  users = userA.select{ |user| user[ config["domains"][app.domain]["db_key"] ] == "1" }
-
-  user_table = users.inject({}){|h, item| h[item["netid"]] = item ; h } #might want to do a googleA.keys == app.domain check and subtrack it from the user_t keys
-  google_table = googleA.inject({}){|h, item| h[item["username"]] = item  if item["domain"] == app.domain ; h } #create a hash of keys that are app.domain
-  return [ user_table, google_table ]
-end
-
 
 # --------------------------------------------------
 
@@ -486,29 +457,32 @@ queue = []
 
 ts = date || convert_time(state_db.timestamp.to_s)
 
-#grab everything that has been modified inside roster since we last ran
-#if created is last_modified that *should* mean it is a new entry
+#queue everything that has been modified inside roster since we last ran
+# and if their created is last_modified that *should* mean new entry not a changed
 queue = userA.inject([]){ |a,user|
   i = convert_time(user["roster_modified"])
   a << user if ts < i && user["created"] != user["last_modified"] ; a
 }
 
-# now we check and see if they have 'changed' accourding to our rules
-total_changed = queue.select do |user|
+#populate the queue with all the user+app tuples that have changed
+total_changed = []
+apps.each do |app|
+  potentials = queue.select do |user|
+      user[ config["domains"][app.domain]["db_key"] ] == "1"
+  end
+  total_changed += potentials.map { |user| [user, app] } if potentials.length > 0
+end
+
+#filter down the queue to those that are changed in names
+queue = total_changed.select do |user,app|
+  if is_changed(googleH[user["netid"]],user)
+    update_google_user(user["netid"],app,state_db) # do a google pull on user
+  end
   is_changed(googleH[user["netid"]],user)
 end
 
-puts "Needs Changed: #{total_changed.length}"
-pretty_print(total_changed.map{ |i| i["netid"] }, 5) if total_changed.length < 200
-
-#populate the queue with all the user+app tuples that have changed
-queue = []
-apps.each do |app|
-  potentials = total_changed.select do |user|
-      user[ config["domains"][app.domain]["db_key"] ] == "1"
-  end
-  queue += potentials.map { |user| [user, app] } if potentials.length > 0
-end
+puts "Needs Changed: #{queue.length}"
+pretty_print(queue.map{ |i| i["netid"] }, 5) if total_changed.length < 200
 
 if $options.dryrun
   queue = []
@@ -519,17 +493,7 @@ end
 
 als = Hash.new
 state_db.google_aliases { |goog| als[goog["alias"]] = goog["g_username"] }
-puts queue.length
 
-queue = queue.select {  |unit|
-  key = unit[0]["netid"]
-  app = unit[1]
-
-  update_google_user(key,app,state_db)
-
-}
-
-exit
 queue.each do |unit|
   key = unit[0]
   app = unit[1]
@@ -550,10 +514,6 @@ queue.each do |unit|
   #-need to update the db now
   update_google_user(key["netid"], app, state_db)
 end
-
-
-
-#exit
 
 state_db.update_timestamp if ! $options.dryrun
 state_db.close
