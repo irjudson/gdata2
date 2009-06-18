@@ -395,6 +395,10 @@ total_new = userA.select do |user|
   googleH[user["netid"]] == nil
 end
 
+if $options.dryrun #we don't even want to check total_new users
+  total_new = []
+end
+
 #filter out everyone that has absolutely no campus affiliation
 total_new = total_new.select do |user|
   dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
@@ -416,24 +420,19 @@ end
 
 #--
 # check to see who really is missing
-
 queue = queue.select {  |unit|
   key = unit[0]["netid"]
   app = unit[1]
 
   update_google_user(key,app,state_db)
-
 }
 
 puts "Needs Created: #{queue.length}"
 pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 200
 
-if $options.dryrun
+if !  $options.new_users # we aren't going to add users
   queue = []
 end
-if !  $options.new_users
-  queue = []
-end #i can't remember enough boolean logic to not screw this up
 
 queue.each do |unit|
   key = unit[0]
@@ -457,12 +456,17 @@ queue = []
 
 ts = date || convert_time(state_db.timestamp.to_s)
 
+
 #queue everything that has been modified inside roster since we last ran
 # and if their created is last_modified that *should* mean new entry not a changed
 queue = userA.inject([]){ |a,user|
   i = convert_time(user["roster_modified"])
   a << user if ts < i && user["created"] != user["last_modified"] ; a
 }
+
+if $options.dryrun #don't even check to see who might have changed
+  queue = []
+end
 
 #populate the queue with all the user+app tuples that have changed
 total_changed = []
@@ -484,15 +488,13 @@ end
 puts "Needs Changed: #{queue.length}"
 pretty_print(queue.map{ |i| i["netid"] }, 5) if total_changed.length < 200
 
-if $options.dryrun
-  queue = []
-end
-if ! $options.changed_users
-  queue = []
-end
 
 als = Hash.new
 state_db.google_aliases { |goog| als[goog["alias"]] = goog["g_username"] }
+
+if ! $options.changed_users #do not actually change the users
+  queue = []
+end
 
 queue.each do |unit|
   key = unit[0]
