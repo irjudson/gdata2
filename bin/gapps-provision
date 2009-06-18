@@ -404,7 +404,7 @@ total_new = total_new.select do |user|
   dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
   # 'or' the truth values of campus affilation and then return as a single
   # value for select to base it's criteria on
-  dbkeys.map{ |campus| user[campus] == "1" }.inject{ |k,i| k | i}
+  dbkeys.map{ |campus| user[campus].to_i == 1 && user["google"].to_i }.inject{ |k,i| k | i}
 end
 
 #-- map the app to each user so we can just iterate through it
