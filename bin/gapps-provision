@@ -289,6 +289,8 @@ OptionParser.new do |opts|
    $options.forward = false
   $options.date = false
   $options.dryrun = false
+  $options.new_users = false
+  $options.changed_users = false
 
    opts.banner = "Usage: gapps-provision.rb [options]"
 
@@ -297,6 +299,15 @@ OptionParser.new do |opts|
     $options.debug   = true
     $options.verbose = true
   end
+
+  opts.on("-A", "--add-new", "Add new users to upstream") do |o|
+    $options.new_users = true
+  end
+
+  opts.on("-a", "--add-changed", "Add changed users to upstream") do |o|
+    $options.changed_users = true
+  end
+
 
    opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
       $options.reset = true
@@ -446,8 +457,12 @@ queue = queue.select {  |unit|
 puts "Needs Created: #{queue.length}"
 pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 200
 
-
-queue = [] if $options.dryrun
+if $options.dryrun
+  queue = []
+end
+if !  $options.new_users
+  queue = []
+end #i can't remember enough boolean logic to not screw this up
 
 queue.each do |unit|
   key = unit[0]
@@ -495,10 +510,26 @@ apps.each do |app|
   queue += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-queue = [] if $options.dryrun
+if $options.dryrun
+  queue = []
+end
+if ! $options.changed_users
+  queue = []
+end
+
 als = Hash.new
 state_db.google_aliases { |goog| als[goog["alias"]] = goog["g_username"] }
+puts queue.length
 
+queue = queue.select {  |unit|
+  key = unit[0]["netid"]
+  app = unit[1]
+
+  update_google_user(key,app,state_db)
+
+}
+
+exit
 queue.each do |unit|
   key = unit[0]
   app = unit[1]
