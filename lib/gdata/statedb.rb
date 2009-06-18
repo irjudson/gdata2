@@ -240,8 +240,11 @@ class State
           if e.to_s.match(/unique/) #we've already seen them?
             STDERR.puts "Username not unique: #{uname} #{first_name} #{last_name} - #{domain}"
           else
-            STDERR.puts "Exception inserting google user in db #{ e } - #{uname}"
-             STDERR.puts "** Statement was: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
+            begin
+              @db.execute("UPDATE google SET  first_name = '#{first_name}', last_name = '#{last_name}', domain = '#{domain}', admin='#{admin}' WHERE username = '#{uname}'")
+            rescue SQLite3::SQLException => e
+              STDERR.puts "Exception inserting google user in db #{ e } - #{uname}"
+            end
           end
         end
       end
