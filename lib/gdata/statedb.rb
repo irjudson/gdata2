@@ -234,19 +234,19 @@ class State
 
         @db.execute("INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');")
       rescue SQLite3::SQLException => e
-        if e.to_s.match(/syntax/) #is our insert syntax wrong?
-          STDERR.puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
-        else
-          if e.to_s.match(/unique/) #we've already seen them?
-            STDERR.puts "Username not unique: #{uname} #{first_name} #{last_name} - #{domain}"
-          else
+#        if e.to_s.match(/syntax/) #is our insert syntax wrong?
+#          STDERR.puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
+#        else
+#          if e.to_s.match(/unique/) #we've already seen them?
+#            STDERR.puts "Username not unique: #{uname} #{first_name} #{last_name} - #{domain}"
+#          else
             begin
               @db.execute("UPDATE google SET  first_name = '#{first_name}', last_name = '#{last_name}', domain = '#{domain}', admin='#{admin}' WHERE username = '#{uname}'")
             rescue SQLite3::SQLException => e
               STDERR.puts "Exception inserting google user in db #{ e } - #{uname}"
             end
-          end
-        end
+#          end
+#        end
       end
 
       if aliases.respond_to? :each
