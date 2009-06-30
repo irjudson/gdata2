@@ -487,8 +487,7 @@ queue = total_changed.select do |user,app|
 end
 
 puts "Needs Changed: #{queue.length}"
-pretty_print(queue.map{ |i| i["netid"] }, 5) if total_changed.length < 200
-
+pretty_print(queue.map{ |i| i[0]["netid"] }, 5) if queue.length < 200
 
 als = Hash.new
 state_db.google_aliases { |goog| als[goog["alias"]] = goog["g_username"] }
