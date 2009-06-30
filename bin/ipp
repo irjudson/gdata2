@@ -324,10 +324,11 @@ apps.each do |app|
 end
 
 
-queue = queue[0..20] / $options.threads
+queue = queue / $options.threads
 worker = []
 
-
+puts "Netid" + "First_last".rjust(30) + "Created".rjust(40)
+puts "=" * 70
   queue.each_with_index do |work_group,k|
     work_group.each_with_index do |key,i|
       entry = key[0]["netid"]
