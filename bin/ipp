@@ -333,7 +333,7 @@ worker = []
       entry = key[0]["netid"]
       app = key[1]
 
-# #      worker[i] = Thread.new do
+     worker[i] = Thread.new do
       user = app.provision.retrieve_user(entry)
       if user.respond_to? :username
          if user.agreed_to_terms == "true"
@@ -341,9 +341,9 @@ worker = []
          end
 
       end
-# #        Thread.exit
-# #      end
-# #      worker.each { |w| w.join}
+       Thread.exit
+     end
+     worker.each { |w| w.join}
     end
   end
 
