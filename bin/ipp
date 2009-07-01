@@ -323,12 +323,13 @@ apps.each do |app|
   queue += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-
+STDERR.puts queue.length
 queue = queue / $options.threads
 worker = []
 
 puts "Netid" + "First_last".rjust(30) + "Created".rjust(40)
 puts "=" * 70
+lines = []
   queue.each_with_index do |work_group,k|
     work_group.each_with_index do |key,i|
       entry = key[0]["netid"]
@@ -338,16 +339,20 @@ puts "=" * 70
       user = app.provision.retrieve_user(entry)
       if user.respond_to? :username
          if user.agreed_to_terms == "true"
-           puts key[0]["netid"] + key[0]["first_last"].rjust(30) + convert_time(key[0]["created"]).to_s.rjust(40)
+           lines << key[0]["netid"] + key[0]["first_last"].rjust(30) + convert_time(key[0]["created"]).to_s.rjust(40)
          end
-
       end
+#       STDERR.puts "exiting thread #{i}"
        Thread.exit
      end
      worker.each { |w| w.join}
     end
+#  STDERR.puts "group #{k} finished"
+  if k % 100 == 0
+    STDERR.puts "#{`date`}"
   end
-
+  end
+puts lines
 
 
 
