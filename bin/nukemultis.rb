@@ -80,7 +80,7 @@ cached_users = DB[:users]
 google_users = DB[:google]
 
 cached_users.filter {|o| (o.bz + o.bl + o.hv + o.gf) > 1}.each{|r| 
-  if (convert_time(r[:last_modified]) > (Time.now  - (24 * 60 * 60))) 
+  if (convert_time(r[:last_modified]) > (Time.now  - (3 * 24 * 60 * 60))) 
     p google_users[ :username => r[:netid] ]
     google_users.filter( :username => r[:netid] ).delete
 
