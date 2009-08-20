@@ -486,11 +486,37 @@ queue = total_changed.select do |user,app|
   is_changed(googleH[user["netid"]],user)
 end
 
+
+aliases = Hash.new
+g_usernames = Hash.new
+state_db.google_aliases { |goog|
+  aliases[ goog["alias"] ] = goog["g_username"]
+  g_usernames[ goog["g_username"] ] = 1
+}
+
+users = userA.select {  |user|
+  email = user["first_last"]
+  g_username = user["netid"]
+
+  #we've seen them in some fasion but
+  #they don't have a proper google alias
+  g_usernames[ g_username ] && aliases[ email ] == nil
+
+}
+
+#this should be function'd
+total_changed = []
+apps.each do |app|
+  potentials = users.select do |user|
+      user[ config["domains"][app.domain]["db_key"] ] == "1"
+  end
+  total_changed += potentials.map { |user| [user, app] } if potentials.length > 0
+end
+queue += total_changed
+
+
 puts "Needs Changed: #{queue.length}"
 pretty_print(queue.map{ |i| i[0]["netid"] }, 5) if queue.length < 200
-
-als = Hash.new
-state_db.google_aliases { |goog| als[goog["alias"]] = goog["g_username"] }
 
 if ! $options.changed_users #do not actually change the users
   queue = []
@@ -501,7 +527,7 @@ queue.each do |unit|
   app = unit[1]
   nickname =  key["first_last"]
 
-  if als[nickname] #we've seen their nickname already so we update their send_as name
+  if aliases[nickname] #we've seen their nickname already so we update their send_as name
     STDERR.puts "exists" if $options.debug
     sendas_alias(app, config, key, nickname)
   else #they have changed their first_last in roster
