@@ -1,0 +1,27 @@
+state:
+  file: /home/academic/rosterdb.sqlite
+domains:
+  msun.edu:
+    domain: msun.edu
+    user: user_
+    password: password_
+    maildomain: students.msun.edu
+    db_key: hv
+  msugf.edu:
+    domain: msugf.edu
+    user: user_
+    password: password_
+    maildomain: my.msugf.edu
+    db_key: gf
+  msubillings.edu:
+    domain: msubillings.edu
+    user: user_
+    password: password_
+    maildomain: student.msubillings.edu
+    db_key: bl
+  montana.edu:
+    domain: montana.edu
+    user: user_
+    password: password_
+    maildomain: msu.montana.edu
+    db_key: bz
