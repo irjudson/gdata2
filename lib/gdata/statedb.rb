@@ -174,7 +174,7 @@ class State
           when "bl_s": (fwalias = "#{uid_alias}@student.msubillings.edu") && bl = 1 && google = 1
           when "gf_s": (fwalias = "#{uid_alias}@my.msugf.edu") && gf = 1 && google = 1
           when "hv_s": (fwalias = "#{uid_alias}@students.msun.edu") && hv = 1 && google = 1
-          when "bz_e", "bl_e", "gf_e", "hv_e": (fwalias = get_mail(entry)) && google = 0
+          when "bz_e", "bl_e", "gf_e", "hv_e": (fwalias = get_mail(entry))
           when "bz_ws","bl_ws","gf_ws","hv_ws": (fwalias = nil) && google = 0
           else
             puts "Unknown role found! #{role[0..3]}" if verbose
