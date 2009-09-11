@@ -3,29 +3,33 @@ require 'sqlite3'
 require 'digest/sha1'
 require 'timestamp'
 
+require 'sequel'
+
 class State
-   attr_reader :timestamp, :verbose
+  attr_reader :timestamp, :verbose
 
-   def initialize(fn, timestamp="19700000000000Z", verb=false)
-      @timestamp = nil
-      @verbose = verb
+  def initialize(fn, timestamp="19700000000000Z", verb=false)
+    @timestamp = nil
+    @verbose = verb
 
-      if !File.exists?(fn)
-         needs_initialization = 1
+    @fn = fn
+
+    if !File.exists?(fn)
+      needs_initialization = 1
+    end
+
+    puts "Creating new state database." if verbose
+
+    @db = SQLite3::Database.new(fn)
+
+    if needs_initialization
+      do_initialization
+    else
+      @db.execute("SELECT * FROM updates;") do |@timestamp|
+        # Doing nothing inside this loop
       end
-
-      puts "Creating new state database." if verbose
-
-      @db = SQLite3::Database.new(fn)
-
-      if needs_initialization
-         do_initialization
-      else
-         @db.execute("SELECT * FROM updates;") do |@timestamp|
-           # Doing nothing inside this loop
-         end
-      end
-   end
+    end
+  end
 
    def init_google
       @db.execute("CREATE TABLE google (username TEXT PRIMARY KEY, first_name TEXT, last_name TEXT, domain TEXT, admin TEXT);")
@@ -227,38 +231,41 @@ class State
       end
     end
 
-    def update_google(uname, fname, lname, domain, admin, aliases)
-      begin
-        first_name = fname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For D'Ann names and the "Nita" roster entry
-        last_name  = lname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For O'Rourke names
+  def update_google(uname, fname, lname, domain, admin, aliases)
+    STDERR.puts "inside update_google #{uname}"
+    first_name = fname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For D'Ann names and the "Nita" roster entry
+    last_name  = lname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For O'Rourke names
 
-        @db.execute("INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');")
-      rescue SQLite3::SQLException => e
-#        if e.to_s.match(/syntax/) #is our insert syntax wrong?
-#          STDERR.puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
-#        else
-#          if e.to_s.match(/unique/) #we've already seen them?
-#            STDERR.puts "Username not unique: #{uname} #{first_name} #{last_name} - #{domain}"
-#          else
-            begin
-              @db.execute("UPDATE google SET  first_name = '#{first_name}', last_name = '#{last_name}', domain = '#{domain}', admin='#{admin}' WHERE username = '#{uname}'")
-            rescue SQLite3::SQLException => e
-              STDERR.puts "Exception inserting google user in db #{ e } - #{uname}"
-            end
-#          end
-#        end
-      end
+    fn = Sequel.sqlite(@fn)
 
-      if aliases.respond_to? :each
-        aliases.each do |a|
-          begin
-            @db.execute("INSERT INTO google_aliases (alias, g_username) VALUES ('#{a}', '#{uname}');")
-          rescue SQLite3::SQLException => e
-            STDERR.puts "Exception inserting google alias in state db #{ e }"
-          end
+    gusers = fn[:google]
+    galiases = fn[:google_aliases]
+
+    fn.transaction do
+      gusers.filter(:username).delete #temp hack mightblow up
+      gusers.insert( :username   => uname,
+                     :first_name => fname,
+                     :last_name  => lname,
+                     :domain     => domain,
+                     :admin      => admin)
+    end
+
+    # rescue Exception => e
+    #   puts "Exception: #{e.class}: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
+    #   exit 1
+    # end
+
+    if aliases.respond_to? :each
+      aliases.each do |a|
+        fn.transaction do
+          galiases.insert( :alias => a, :g_username => uname)
         end
       end
     end
+
+    fn.disconnect
+
+  end
 
    def check(entry, source_stamp)
       source = Time.parse(source_stamp[0])
