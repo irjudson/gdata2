@@ -1,4 +1,127 @@
 
+bin/check_user.rb,0
+
+bin/checkuser,693
+class ArrayArray31,468
+  def / len/32,480
+def pretty_print(list,num)pretty_print48,797
+def random_password(size = 12)random_password55,959
+def create_user(username,first,last,app)create_user65,1269
+def disable_password_reset(username, first, last, app,config)disable_password_reset90,2137
+def add_alias(apps,username,nickname)add_alias118,3105
+def sendas_alias(app,config,userH,nickname)sendas_alias143,3954
+def convert_time(stime)convert_time176,5314
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys189,5526
+def update_google_user(entry, app, state_db)update_google_user219,6475
+def is_changed(google_entry, user_entry)is_changed236,6966
+
+bin/gapps-provision,693
+class ArrayArray29,450
+  def / len/30,462
+def pretty_print(list,num)pretty_print46,779
+def random_password(size = 12)random_password53,941
+def create_user(username,first,last,app)create_user63,1251
+def disable_password_reset(username, first, last, app,config)disable_password_reset88,2119
+def add_alias(apps,username,nickname)add_alias116,3087
+def sendas_alias(app,config,userH,nickname)sendas_alias141,3936
+def convert_time(stime)convert_time174,5296
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys187,5513
+def update_google_user(entry, app, state_db)update_google_user217,6462
+def is_changed(google_entry, user_entry)is_changed234,6953
+
+bin/get_users.rb,543
+class StateState18,308
+   def initialize(fn, timestamp="19700000000000Z")initialize21,347
+   def do_initializationdo_initialization40,764
+   def resetreset46,1147
+   def show_usersshow_users53,1327
+   def update_timestampupdate_timestamp64,1573
+   def count_userscount_users71,1779
+   def exists?(entry)exists?78,1918
+   def update(entry, ts=nil)update91,2289
+   def check(entry, source_stamp)check150,5964
+   def closeclose163,6303
+def get_mail(entry)get_mail168,6343
+def parse_uids(uid_array, dn)parse_uids180,6536
+
+bin/googlemigration,93
+class ArrayArray15,184
+  def / len/16,196
+def pretty_print(list,num)pretty_print32,513
+
+bin/grab-users.rb,84
+def get_mail(entry)get_mail23,391
+def parse_uids(uid_array, dn)parse_uids36,626
+
+bin/ipp.orig,693
+class ArrayArray31,468
+  def / len/32,480
+def pretty_print(list,num)pretty_print48,797
+def random_password(size = 12)random_password55,959
+def create_user(username,first,last,app)create_user65,1269
+def disable_password_reset(username, first, last, app,config)disable_password_reset90,2137
+def add_alias(apps,username,nickname)add_alias118,3105
+def sendas_alias(app,config,userH,nickname)sendas_alias143,3954
+def convert_time(stime)convert_time176,5314
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys189,5526
+def update_google_user(entry, app, state_db)update_google_user219,6475
+def is_changed(google_entry, user_entry)is_changed236,6966
+
+bin/nukemultis.rb,192
+class ArrayArray28,394
+  def / len/29,406
+def pretty_print(list,num)pretty_print45,723
+def random_password(size = 12)random_password52,885
+def convert_time(stime)convert_time61,1163
+
+bin/query-acceptance,693
+class ArrayArray31,468
+  def / len/32,480
+def pretty_print(list,num)pretty_print48,797
+def random_password(size = 12)random_password55,959
+def create_user(username,first,last,app)create_user65,1269
+def disable_password_reset(username, first, last, app,config)disable_password_reset90,2137
+def add_alias(apps,username,nickname)add_alias118,3105
+def sendas_alias(app,config,userH,nickname)sendas_alias143,3954
+def convert_time(stime)convert_time176,5314
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys189,5526
+def update_google_user(entry, app, state_db)update_google_user219,6475
+def is_changed(google_entry, user_entry)is_changed236,6966
+
+bin/sync-google-apps,813
+class StateState26,369
+   def initialize(fn, timestamp="19700000000000Z")initialize29,408
+   def do_initializationdo_initialization54,981
+   def resetreset60,1256
+   def show_usersshow_users67,1436
+   def update_timestampupdate_timestamp78,1682
+   def count_userscount_users85,1888
+   def exists?(entry)exists?92,2027
+   def push_update(entry)push_update104,2348
+   def process_updatesprocess_updates108,2453
+   def update(entry, ts=nil)update119,2800
+   def check(entry, source_stamp)check133,3337
+   def stopstop146,3675
+   def closeclose150,3721
+def random_password(size = 12)random_password155,3761
+def parse_uids(uid_array, dn)parse_uids162,3994
+def create_and_update_user(apps, entry, config)create_and_update_user179,4302
+def print_user(entry, config)print_user331,9460
+
+bin/wtfbbq,693
+class ArrayArray29,450
+  def / len/30,462
+def pretty_print(list,num)pretty_print46,779
+def random_password(size = 12)random_password53,941
+def create_user(username,first,last,app)create_user63,1251
+def disable_password_reset(username, first, last, app,config)disable_password_reset88,2119
+def add_alias(apps,username,nickname)add_alias116,3087
+def sendas_alias(app,config,userH,nickname)sendas_alias141,3936
+def convert_time(stime)convert_time174,5296
+def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys187,5513
+def update_google_user(entry, app, state_db)update_google_user217,6462
+def is_changed(google_entry, user_entry)is_changed234,6953
+
 lib/gdata/apps/email.rb,1604
 module GData #:nodoc:GData4,40
    module Apps #:nodoc:Apps5,62
@@ -82,7 +205,7 @@ module GData #:nodoc:GData4,40
      def initializeinitialize7,162
      def add_path(url)add_path14,507
 
-lib/gdata/statedb.rb,859
+lib/gdata/statedb.rb,860
 class StateState6,80
    def initialize(fn, timestamp="19700000000000Z", verb=false)initialize9,129
    def init_googleinit_google30,609
@@ -99,9 +222,9 @@ class StateState6,80
    def count_userscount_users143,4178
    def exists?(entry)exists?150,4317
    def update(entry, username, uid_alias, email_addr=nil, ts=nil)update163,4688
-    def update_google(uname, fname, lname, domain, admin, aliases)update_google222,8449
-   def check(entry, source_stamp)check251,9878
-   def closeclose264,10217
+    def update_google(uname, fname, lname, domain, admin, aliases)update_google230,9160
+   def check(entry, source_stamp)check263,10852
+   def closeclose276,11191
 
 lib/gdata.rb,303
 module GData #:nodoc:GData4,154
@@ -114,75 +237,4 @@ lib/timestamp.rb,136
   def time_distance_or_time_stamp(time = nil, options = {})time_distance_or_time_stamp6,285
   def time_stamp(time)time_stamp30,1458
 
-bin/#gapps-provision#,932
-def pretty_print(list,num)pretty_print31,466
-def random_password(size = 12)random_password38,628
-def create_usercreate_user48,938
-def update_password(username, first, last, app)update_password72,1674
-def add_alias(apps,username,nickname)add_alias100,2556
-def create_forwardcreate_forward127,3496
-def send_as_alias(app,config, userH)send_as_alias163,4607
-def create_and_update_user(apps, entry, config)create_and_update_user192,5753
-def convert_time(stime)convert_time216,6255
-def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys223,6385
-def find_changed(google_table, user_table)find_changed245,6952
-def update(google_table, user_table, app, state_db)update260,7434
-def find_new(google_table, user_table, app, state_db) # ireally need to just make a classs as much as i pass around these tablesfind_new272,7761
-def user_hash_data(app,userA,googleA,config)user_hash_data280,8005
-
-bin/check_user.rb,0
-
-bin/gapps-provision,932
-def pretty_print(list,num)pretty_print31,466
-def random_password(size = 12)random_password38,628
-def create_usercreate_user48,938
-def update_password(username, first, last, app)update_password72,1674
-def add_alias(apps,username,nickname)add_alias100,2556
-def create_forwardcreate_forward127,3496
-def send_as_alias(app,config, userH)send_as_alias163,4607
-def create_and_update_user(apps, entry, config)create_and_update_user192,5753
-def convert_time(stime)convert_time216,6255
-def refresh_absent_keys(absent_google_keys, apps, state_db)refresh_absent_keys223,6385
-def find_changed(google_table, user_table)find_changed245,6952
-def update(google_table, user_table, app, state_db)update260,7434
-def find_new(google_table, user_table, app, state_db) # ireally need to just make a classs as much as i pass around these tablesfind_new272,7761
-def user_hash_data(app,userA,googleA,config)user_hash_data280,8005
-
-bin/get_users.rb,543
-class StateState18,308
-   def initialize(fn, timestamp="19700000000000Z")initialize21,347
-   def do_initializationdo_initialization40,764
-   def resetreset46,1147
-   def show_usersshow_users53,1327
-   def update_timestampupdate_timestamp64,1573
-   def count_userscount_users71,1779
-   def exists?(entry)exists?78,1918
-   def update(entry, ts=nil)update91,2289
-   def check(entry, source_stamp)check150,5964
-   def closeclose163,6303
-def get_mail(entry)get_mail168,6343
-def parse_uids(uid_array, dn)parse_uids180,6536
-
-bin/grab-users.rb,84
-def get_mail(entry)get_mail23,391
-def parse_uids(uid_array, dn)parse_uids36,626
-
-bin/sync-google-apps,813
-class StateState26,369
-   def initialize(fn, timestamp="19700000000000Z")initialize29,408
-   def do_initializationdo_initialization54,981
-   def resetreset60,1256
-   def show_usersshow_users67,1436
-   def update_timestampupdate_timestamp78,1682
-   def count_userscount_users85,1888
-   def exists?(entry)exists?92,2027
-   def push_update(entry)push_update104,2348
-   def process_updatesprocess_updates108,2453
-   def update(entry, ts=nil)update119,2800
-   def check(entry, source_stamp)check133,3337
-   def stopstop146,3675
-   def closeclose150,3721
-def random_password(size = 12)random_password155,3761
-def parse_uids(uid_array, dn)parse_uids162,3994
-def create_and_update_user(apps, entry, config)create_and_update_user179,4302
-def print_user(entry, config)print_user331,9460
+scripts/test.rb,0
