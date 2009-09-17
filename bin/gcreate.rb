@@ -262,7 +262,7 @@ OptionParser.new do |opts|
   $options.dryrun = false
   $options.new_users = false
   $options.changed_users = false
-  $options.user = "h47z861"
+  $options.user = nil
 
   opts.banner = "Usage: gapps-provision.rb [options]"
 
@@ -305,6 +305,11 @@ OptionParser.new do |opts|
     puts OptionParser::Version.join('.')
   end
 end.parse!
+
+if ! $options.user
+  puts "Please enter a netid (use -u NETID)"
+  exit
+end
 
 # Load configuration file
 config = YAML.load_file($options.config)
