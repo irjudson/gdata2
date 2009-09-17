@@ -396,10 +396,12 @@ apps.each do |app|
 end
 
 queue = total_changed
-p queue
 
-exit
+if $options.dryrun
+  p queue
 
+  exit
+end
 
 queue.each do |unit|
   key = unit[0]
