@@ -400,24 +400,19 @@ p queue
 
 exit
 
+
 queue.each do |unit|
   key = unit[0]
   app = unit[1]
-  nickname =  key["first_last"]
+  #i shouldn't use first_last since it has been wrong in the past
+  nickname =  key["first_last"] #key["first"].downcase+"."+key["last"].downcase
 
-  if aliases[nickname] #we've seen their nickname already so we update their send_as name
-    STDERR.puts "exists" if $options.debug
-    sendas_alias(app, config, key, nickname)
-  else #they have changed their first_last in roster
-    STDERR.puts "new" + nickname if $options.debug
-    #-google apps alias create
-    add_alias(app, key["netid"],nickname )
-    #-email alias create
-    sendas_alias(app, config, key, nickname)
-  end
-  #change their google account entry name
+  create_user(key["netid"],key["first"], key["last"], app)
+  disable_password_reset(key["netid"],key["first"], key["last"], app, config)
   app.provision.update_user(key["netid"],key["first"], key["last"])
-  #-need to update the db now
+  add_alias(app, key["netid"],nickname )
+  sendas_alias(app, config, key, nickname)
+  #need to update the db now
   update_google_user(key["netid"], app, state_db)
 end
 
