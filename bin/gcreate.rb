@@ -272,52 +272,38 @@ OptionParser.new do |opts|
     $options.verbose = true
   end
 
-  opts.on("-A", "--add-new", "Add new users to upstream") do |o|
-    $options.new_users = true
+  opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
+    $options.config = o.to_s
   end
 
-  opts.on("-a", "--add-changed", "Add changed users to upstream") do |o|
-    $options.changed_users = true
+  opts.on("-v", "--verbose", "Operate verbosely ;not implemented;") do |o|
+    $options.verbose = true
+  end
+
+  opts.on("-d", "--debug", "debugging output") do |o|
+    $options.debug = true
   end
 
 
-   opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
-      $options.reset = true
-      $options.operator = "<="
-   end
+  opts.on("-s", "--statdb [DBFILE]", "State Database file.") do |o|
+    $options.statedbfn = o
+  end
 
-   opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
-      $options.config = o.to_s
-   end
+  opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 20090927121300Z, -D w/ nothing is Date = 0") do |o|
+    $options.date = convert_time(o)
+  end
 
-   opts.on("-v", "--verbose", "Operate verbosely ;not implemented;") do |o|
-      $options.verbose = true
-   end
-
-   opts.on("-d", "--debug", "debugging output") do |o|
-      $options.debug = true
-   end
-
-
-   opts.on("-s", "--statdb [DBFILE]", "State Database file.") do |o|
-      $options.statedbfn = o
-   end
-
-   opts.on("-D", "--date [DATE]", "run as if the date timestamp was X. Example -D 20090927121300Z, -D w/ nothing is Date = 0") do |o|
-      $options.date = convert_time(o)
-   end
-
-   opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
-      $options.threads = o.to_i
-   end
+  opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
+    $options.threads = o.to_i
+  end
 
   opts.on("-u", "--userid [NETID]", "The netid of the user") do |o|
-      $options.user = o.to_s
-   end
+    $options.user = o.to_s
+  end
 
-   opts.on_tail("--version", "Show version") do
-      puts OptionParser::Version.join('.')
-   end
+  opts.on_tail("--version", "Show version") do
+    puts OptionParser::Version.join('.')
+  end
 end.parse!
 
 # Load configuration file
@@ -395,84 +381,10 @@ date = $options.date if $options.date
 
 googleH = googleA.inject({}){|h, item| h[item["username"]] = item ; h }
 
-# these are all the users that have never been apportioned accourding
-# to our database
-total_new = userA.select do |user|
-  googleH[user["netid"]] == nil
-end
-
-if $options.dryrun #we don't even want to check total_new users
-  total_new = []
-end
-
-#filter out everyone that has absolutely no campus affiliation
-total_new = total_new.select do |user|
-  dbkeys = config["domains"].keys.map { |entry| config["domains"][entry]["db_key"]}
-  # 'or' the truth values of campus affilation and then return as a single
-  # value for select to base it's criteria on
-  dbkeys.map{ |campus| user[campus].to_i == 1 and user["google"].to_i == 1 }.inject{ |k,i| k or i}
-end
-
-#-- map the app to each user so we can just iterate through it
-# - create a tuple to queue.each over
-queue = []
-apps.each do |app|
-  potentials = total_new.select do |user|
-      user[ config["domains"][app.domain]["db_key"] ] == "1"
-  end
-  queue += potentials.map { |user| [user, app] } if potentials.length > 0
-end
-
-
-#--
-# check to see who really is missing
-queue = queue.select {  |unit|
-  key = unit[0]["netid"]
-  app = unit[1]
-
-  update_google_user(key,app,state_db)
-}
-
-puts "Needs Created: #{queue.length}"
-pretty_print(queue.map{ |i| i[0]["netid"]}.sort, 5) if queue.length < 200
-
-if !  $options.new_users # we aren't going to add users
-  queue = []
-end
-
-queue.each do |unit|
-  key = unit[0]
-  app = unit[1]
-  #i shouldn't use first_last since it has been wrong in the past
-  nickname =  key["first_last"] #key["first"].downcase+"."+key["last"].downcase
-
-  create_user(key["netid"],key["first"], key["last"], app)
-  disable_password_reset(key["netid"],key["first"], key["last"], app, config)
-  app.provision.update_user(key["netid"],key["first"], key["last"])
-  add_alias(app, key["netid"],nickname )
-  sendas_alias(app, config, key, nickname)
-  #need to update the db now
-  update_google_user(key["netid"], app, state_db)
-end
-
-#clear the queue
-queue = []
-
-# ---------------------------------------- Alter changed people
-
-ts = date || convert_time(state_db.timestamp.to_s)
-
-
-#queue everything that has been modified inside roster since we last ran
-# and if their created is last_modified that *should* mean new entry not a changed
 queue = userA.inject([]){ |a,user|
-  i = convert_time(user["roster_modified"])
-  a << user if ts < i && user["created"] != user["last_modified"] ; a
-}
 
-if $options.dryrun #don't even check to see who might have changed
-  queue = []
-end
+  a << user if user["netid"] == $options.user ; a
+}
 
 #populate the queue with all the user+app tuples that have changed
 total_changed = []
@@ -483,49 +395,10 @@ apps.each do |app|
   total_changed += potentials.map { |user| [user, app] } if potentials.length > 0
 end
 
-#filter down the queue to those that are changed in names
-queue = total_changed.select do |user,app|
-  if is_changed(googleH[user["netid"]],user)
-    update_google_user(user["netid"],app,state_db) # do a google pull on user
-  end
-  is_changed(googleH[user["netid"]],user)
-end
+queue = total_changed
+p queue
 
-
-aliases = Hash.new
-g_usernames = Hash.new
-state_db.google_aliases { |goog|
-  aliases[ goog["alias"] ] = goog["g_username"]
-  g_usernames[ goog["g_username"] ] = 1
-}
-
-users = userA.select {  |user|
-  email = user["first_last"]
-  g_username = user["netid"]
-
-  #we've seen them in some fasion but
-  #they don't have a proper google alias
-  g_usernames[ g_username ] && aliases[ email ] == nil
-
-}
-
-#this should be function'd
-total_changed = []
-apps.each do |app|
-  potentials = users.select do |user|
-      user[ config["domains"][app.domain]["db_key"] ] == "1"
-  end
-  total_changed += potentials.map { |user| [user, app] } if potentials.length > 0
-end
-queue += total_changed
-
-
-puts "Needs Changed: #{queue.length}"
-pretty_print(queue.map{ |i| i[0]["netid"] }, 5) if queue.length < 200
-
-if ! $options.changed_users #do not actually change the users
-  queue = []
-end
+exit
 
 queue.each do |unit|
   key = unit[0]
@@ -548,7 +421,6 @@ queue.each do |unit|
   update_google_user(key["netid"], app, state_db)
 end
 
-state_db.update_timestamp if ! $options.dryrun
 state_db.close
 # --------------------------------------------------
 
