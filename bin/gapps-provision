@@ -516,7 +516,7 @@ queue += total_changed
 
 
 puts "Needs Changed: #{queue.length}"
-pretty_print(queue.map{ |i| i[0]["netid"] }, 5) if queue.length < 200
+pretty_print(queue.map{ |i| i[0]["netid"] }.sort, 5) if queue.length < 200
 
 if ! $options.changed_users #do not actually change the users
   queue = []
