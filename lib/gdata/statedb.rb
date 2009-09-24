@@ -206,9 +206,17 @@ class State
        users = fn[:users]
 
        fn.transaction do
+
+        createtimestamp = nil
+        if entry.respond_to? :createTimestamp
+          createtimestamp = entry.createTimestamp
+        else
+          createtimestamp = entry.modifyTimestamp
+        end
+
         users.filter(:idx => entry.uniqueIdentifier).delete #hack
         users.insert(:idx => entry.uniqueIdentifier,
-                     :created => entry.createTimestamp,
+                     :created => createtimestamp,
                      :last_modified => entry.modifyTimestamp,
                      :roster_modified => ts,
                      :netid => username,
