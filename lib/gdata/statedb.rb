@@ -207,25 +207,30 @@ class State
 
        fn.transaction do
 
-        createtimestamp = nil
-        if entry.respond_to? :createTimestamp
-          createtimestamp = entry.createTimestamp
-        else
-          createtimestamp = entry.modifyTimestamp
+        # createtimestamp = nil
+        # if entry.respond_to? :createTimestamp
+        #   createtimestamp = entry.createTimestamp
+        # else
+        #   createtimestamp = entry.modifyTimestamp
+        # end
+        begin
+          users.filter(:idx => entry.uniqueIdentifier).delete #hack
+          flag=users.insert(:idx => entry.uniqueIdentifier,
+                       :created => entry.createTimestamp,
+                       :last_modified => entry.modifyTimestamp,
+                       :roster_modified => ts,
+                       :netid => username,
+                       :first => first_name,
+                       :last => last_name,
+                       :first_last => uid_alias,
+                       :bz => bz, :bl => bl, :gf => gf, :hv => hv,
+                       :forward => forward.join(","),
+                       :google => google)
+          puts flag
+        rescue Exception => e
+          STDERR.puts "Insertion Error: #{entry.uniqueIdentifier } failed #{e} #{e.class}"
         end
 
-        users.filter(:idx => entry.uniqueIdentifier).delete #hack
-        users.insert(:idx => entry.uniqueIdentifier,
-                     :created => createtimestamp,
-                     :last_modified => entry.modifyTimestamp,
-                     :roster_modified => ts,
-                     :netid => username,
-                     :first => first_name,
-                     :last => last_name,
-                     :first_last => uid_alias,
-                     :bz => bz, :bl => bl, :gf => gf, :hv => hv,
-                     :forward => forward.join(","),
-                     :google => google)
       end
        fn.disconnect
      end
