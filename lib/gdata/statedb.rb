@@ -215,7 +215,7 @@ class State
         # end
         begin
           users.filter(:idx => entry.uniqueIdentifier).delete #hack
-          flag=users.insert(:idx => entry.uniqueIdentifier,
+          users.insert(:idx => entry.uniqueIdentifier,
                        :created => entry.createTimestamp,
                        :last_modified => entry.modifyTimestamp,
                        :roster_modified => ts,
@@ -226,7 +226,6 @@ class State
                        :bz => bz, :bl => bl, :gf => gf, :hv => hv,
                        :forward => forward.join(","),
                        :google => google)
-          puts flag
         rescue Exception => e
           STDERR.puts "Insertion Error: #{entry.uniqueIdentifier } failed #{e} #{e.class}"
         end
