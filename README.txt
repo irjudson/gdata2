@@ -17,6 +17,8 @@ gdata2 is a Ruby wrapper around the Google Data API's.
 === Manual Download:
 
 Install ruby-net-ldap gem
+Install sequel gem
+Install sqlite3-ruby gem
 Download the latest release from <URL>
 
 === Git:

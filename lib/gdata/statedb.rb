@@ -3,29 +3,33 @@ require 'sqlite3'
 require 'digest/sha1'
 require 'timestamp'
 
+require 'sequel'
+
 class State
-   attr_reader :timestamp, :verbose
+  attr_reader :timestamp, :verbose
 
-   def initialize(fn, timestamp="19700000000000Z", verb=false)
-      @timestamp = nil
-      @verbose = verb
+  def initialize(fn, timestamp="19700000000000Z", verb=false)
+    @timestamp = nil
+    @verbose = verb
 
-      if !File.exists?(fn)
-         needs_initialization = 1
+    @fn = fn
+
+    if !File.exists?(fn)
+      needs_initialization = 1
+    end
+
+    puts "Creating new state database." if verbose
+
+    @db = SQLite3::Database.new(fn)
+
+    if needs_initialization
+      do_initialization
+    else
+      @db.execute("SELECT * FROM updates;") do |@timestamp|
+        # Doing nothing inside this loop
       end
-
-      puts "Creating new state database." if verbose
-
-      @db = SQLite3::Database.new(fn)
-
-      if needs_initialization
-         do_initialization
-      else
-         @db.execute("SELECT * FROM updates;") do |@timestamp|
-           # Doing nothing inside this loop
-         end
-      end
-   end
+    end
+  end
 
    def init_google
       @db.execute("CREATE TABLE google (username TEXT PRIMARY KEY, first_name TEXT, last_name TEXT, domain TEXT, admin TEXT);")
@@ -196,69 +200,73 @@ class State
       else
         last_name = entry.sn
       end
-      first_name = first_name.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '')
-      last_name  = last_name.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '')
 
-      if ! exists?(entry.uniqueIdentifier)
+     if ! exists?(entry.uniqueIdentifier)
+       fn = Sequel.sqlite(@fn)
+       users = fn[:users]
+
+       fn.transaction do
+
+        # createtimestamp = nil
+        # if entry.respond_to? :createTimestamp
+        #   createtimestamp = entry.createTimestamp
+        # else
+        #   createtimestamp = entry.modifyTimestamp
+        # end
         begin
-            puts "Inserting #{entry.dn} with TS: #{ts}" if verbose
-            puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')" if verbose
-            @db.execute("INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', \"#{first_name}\", \"#{last_name}\", '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')")
-        rescue SQLite3::SQLException => e
-          #puts "Exception inserting data in db ", e
-          begin
-            puts "Updating #{entry.dn} with TS: #{ts}" if verbose
-            @db.execute("UPDATE users SET created = '#{entry.createTimestamp}', last_modified = '#{entry.modifyTimestamp}', roster_modified = '#{ts}', netid = '#{username}', first = \"#{first_name}\", last = \"#{last_name}\", first_last = '#{uid_alias}', bz = '#{bz}', bl = '#{bl}', gf = '#{gf}', hv = '#{hv}', forward = '#{forward.join(",")}', google = '#{google}' WHERE idx = '#{entry.uniqueIdentifier}'")
-          rescue SQLite3::SQLException => e
-            puts "Exception updating data in db ", e
-            puts "-also tried-"
-            puts "QUERY: "+"INSERT INTO users (idx, created, last_modified, roster_modified, netid, first, last, first_last, bz, bl, gf, hv, forward, google) VALUES ('#{entry.uniqueIdentifier}', '#{entry.createTimestamp}', '#{entry.modifyTimestamp}', '#{ts}', '#{username}', '#{first_name}', '#{last_name}', '#{uid_alias}', '#{bz}', '#{bl}', '#{gf}', '#{hv}', '#{forward.join(",")}', '#{google}')"
-            puts "QUERY: "+"UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}'"
-          end
+          users.filter(:idx => entry.uniqueIdentifier).delete #hack
+          users.insert(:idx => entry.uniqueIdentifier,
+                       :created => entry.createTimestamp,
+                       :last_modified => entry.modifyTimestamp,
+                       :roster_modified => ts,
+                       :netid => username,
+                       :first => first_name,
+                       :last => last_name,
+                       :first_last => uid_alias,
+                       :bz => bz, :bl => bl, :gf => gf, :hv => hv,
+                       :forward => forward.join(","),
+                       :google => google)
+        rescue Exception => e
+          STDERR.puts "Insertion Error: #{entry.uniqueIdentifier } failed #{e} #{e.class}"
         end
-      else
-        begin
-          puts "Updating #{entry.dn} with TS: #{ts}" if verbose
-          @db.execute("UPDATE users SET created = '#{entry.createTimestamp}', last_modified = '#{entry.modifyTimestamp}', roster_modified = '#{ts}', netid = '#{username}', first = \"#{first_name}\", last = \"#{last_name}\", first_last = '#{uid_alias}', bz = '#{bz}', bl = '#{bl}', gf = '#{gf}', hv = '#{hv}', forward = '#{forward.join(",")}', google = '#{google}' WHERE idx = '#{entry.uniqueIdentifier}'")
-        rescue SQLite3::SQLException => e
-          puts "Exception updating data in db ", e
-          puts "QUERY: "+"UPDATE users SET last_modified = '#{ts}' WHERE idx = '#{entry}'"
+
+      end
+       fn.disconnect
+     end
+   end
+
+  def update_google(uname, fname, lname, domain, admin, aliases)
+
+    fn = Sequel.sqlite(@fn)
+
+    gusers = fn[:google]
+    galiases = fn[:google_aliases]
+
+    fn.transaction do
+      gusers.filter(:username => uname).delete #temp hack mightblow up
+      gusers.insert( :username   => uname,
+                     :first_name => fname,
+                     :last_name  => lname,
+                     :domain     => domain,
+                     :admin      => admin)
+    end
+
+    # rescue Exception => e
+    #   puts "Exception: #{e.class}: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
+    #   exit 1
+    # end
+
+    if aliases.respond_to? :each
+      aliases.each do |a|
+        fn.transaction do
+          galiases.insert( :alias => a, :g_username => uname)
         end
       end
     end
 
-    def update_google(uname, fname, lname, domain, admin, aliases)
-      begin
-        first_name = fname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For D'Ann names and the "Nita" roster entry
-        last_name  = lname.sub(/'/,"\?'").sub('?','\\').gsub(/"/, '') #FIXED: For O'Rourke names
+    fn.disconnect
 
-        @db.execute("INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}');")
-      rescue SQLite3::SQLException => e
-#        if e.to_s.match(/syntax/) #is our insert syntax wrong?
-#          STDERR.puts "Syntax Exception: INSERT INTO google (username, first_name, last_name, domain, admin) VALUES ('#{uname}',\"#{first_name}\", \"#{last_name}\", '#{domain}', '#{admin}'); \t#{ e }"
-#        else
-#          if e.to_s.match(/unique/) #we've already seen them?
-#            STDERR.puts "Username not unique: #{uname} #{first_name} #{last_name} - #{domain}"
-#          else
-            begin
-              @db.execute("UPDATE google SET  first_name = '#{first_name}', last_name = '#{last_name}', domain = '#{domain}', admin='#{admin}' WHERE username = '#{uname}'")
-            rescue SQLite3::SQLException => e
-              STDERR.puts "Exception inserting google user in db #{ e } - #{uname}"
-            end
-#          end
-#        end
-      end
-
-      if aliases.respond_to? :each
-        aliases.each do |a|
-          begin
-            @db.execute("INSERT INTO google_aliases (alias, g_username) VALUES ('#{a}', '#{uname}');")
-          rescue SQLite3::SQLException => e
-            STDERR.puts "Exception inserting google alias in state db #{ e }"
-          end
-        end
-      end
-    end
+  end
 
    def check(entry, source_stamp)
       source = Time.parse(source_stamp[0])
