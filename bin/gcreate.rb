@@ -16,6 +16,16 @@ require 'gdata/apps'
 require 'timestamp'
 require 'statedb'
 
+#---
+#invocation
+#    ruby gcreate.rb -c configfile -u uid
+#  relies on the fact that you have a user that has their affiliations
+#  set and that the config file has the proper listing of db keys
+#  generally this is the gapps-provision yml file
+#  you might also have to have the user have an updated timestamp in
+# last modified. not sure.
+
+
 $options = OpenStruct.new
 $queue = Array.new
 $sync = Mutex.new
