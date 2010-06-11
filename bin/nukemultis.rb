@@ -1,4 +1,16 @@
 #!/usr/bin/env ruby
+#=========================================================================================
+# Name: NUKEMULTIS.RB
+# Purpose: This appears to remove from the google table users that have more than
+#          one of the bz/bl/hv/gf flags set in the user table of rosterdb.sqlite.
+#          Still trying to determine why - mb
+# Inputs: roster:/home/academic/rosterdb.sqlite
+# Outputs: A list of users that have been removed from the google table of rosterdb.sqlite
+#          as near as I can tell
+# Called From: Academic users crontab
+# Calls to: None.
+# Notes:
+# =========================================================================================
 #  
 # Require Other Code/Libraries
 require 'rubygems'
