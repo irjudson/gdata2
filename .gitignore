@@ -10,3 +10,4 @@ bin/*.dump
 bin/google.dmp
 bin/harpo.rtalyml
 bin/*log*
+script/test.rb
