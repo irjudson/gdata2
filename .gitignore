@@ -3,3 +3,4 @@ bin/checkaccounts.rb
 *.sqlite
 *.out
 *~
+bin/rosterdb.sqlite.bak
