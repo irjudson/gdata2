@@ -17,8 +17,8 @@
 # and add the relative path to the library directory to $LOAD_PATH ($:) so
 # the program can find it's libraries.
 #
-ipath = File.expand_path(File.dirname(__FILE__))+'/../lib'
-$:.unshift(ipath) unless $:.include?(ipath)
+include_path = File.expand_path(File.dirname(__FILE__))+'/../lib'
+$:.unshift(include_path) unless $:.include?(include_path)
 
 require 'rubygems'
 require 'sqlite3'
@@ -32,6 +32,12 @@ require 'timestamp'
 #
 # 6/4/10: statedb appears to be a custom interface to the GApps API routines.
 #         Need to go through statedb and document that next - mb
+# 
+# 6/11/10: 
+#         Statedb is a local sqlite database use to cache values needed in each run of the 
+#         provisioning. It is primarily used to avoid reprovisioning people, since a 
+#         provisioned flag is not able to be written back into ldap (that isn't necessarily 
+#         where it should go anyway) - irj
 #
 require 'statedb'
 
@@ -39,6 +45,8 @@ require 'statedb'
 # 6/7/10: Create an open data object called $options we can stuff useful
 #         options in for later use. This supposedly needs "require 'ostruct'"
 #         but I don't see it anywhere.  How is this working - or is it? -mb
+# 
+# 6/10/10: ostruct is required in 'net/ldap' so it's already loaded by a previous require. -- IRJ
 #
 $options = OpenStruct.new
 $source = nil
@@ -50,8 +58,13 @@ $count = 0
 #
 $config = Hash.new
 
-
-# Parse email address out of ldap entry
+##
+# This pulls the email address out of ldap entry
+# 
+# @param [Net::LDAP::Entry] entry The LDAP entry to be processed.
+#
+# @return [String] The email address in the LDAP entry.
+# 
 def get_mail(entry)
   entry['mail'].each do |addr|
    addr.downcase!
@@ -64,7 +77,15 @@ def get_mail(entry)
   end
 end
 
-# Parse NetID and UID from uid attributes
+##
+# This extracts the netid and the first first.last alias in ldap
+# TODO: This should probably check all first.last aliases, since we accumulate them in LDAP
+# 
+# @param [Array of Strings] uid_array an array of the uid attributes in ldap
+# @param [String] dn the distinguishedName attribute from ldap
+# 
+# @return [String, String] distinguishedName (NetID) and first first.last alias
+# 
 def parse_uids(uid_array, dn)
    uid_dn = dn.split(',')[0].split('=')[1]
    uid_alias = nil
@@ -90,17 +111,15 @@ end
 #
 #         Check for command-line options and handle them - mb
 #
+# 6/10/10: This also stores command line options in the $options object for use later. -- IRJ
+#
 OptionParser.new do |opts|
    $options.verbose = false
    $options.config = 'config.yml'
    $options.reset = false
    $options.operator = ">="
 
-#
-# 6/8/10:  This appears wrong.  Should be "Usage: grab-users.rb [options]".  I'll leave it
-#          for now till I'm positive - mb
-#
-   opts.banner = "Usage: sync-apps.rb [options]"
+   opts.banner = "Usage: grab-users.rb [options]"
 
    opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
       $options.reset = true
@@ -191,7 +210,6 @@ state_db.reset_source if $options.reset
 #
 state_db.init_source if $options.reset
 
-
 # Get the right timestamp to compare against for retrieving users from source data
 #
 # 6/8/10: Get the right timestamp and format properly to compare against time format in rosterdb.sqlite
@@ -203,7 +221,12 @@ if $options.reset || ts.nil?
 end
 
 # Pull attributes from the directory for users that have been modified since last run
-# Get attributes we care about
+# Get only attributes we care about
+#
+# 6/9/10: I think attributes gets all the values in the "attributes" section of myportal.yml - mb
+# 6/10/10: Yes, this is specifying a subset of attributes to get out of LDAP rather than all of them. -- IRJ
+attributes = $config["attributes"].values
+
 #
 # 6/9/10: Build an administrator filter.  myportal.yml has a source section and an admin
 #         section within that.  Pull all the admins out and make a filter for them. At the
@@ -212,9 +235,6 @@ end
 #         Left original comments above in case they offer something I don't understand yet. Error
 #         checking includeis making sure the .yml file has a "admin" section. - mb
 #
-# 6/9/10: I think attributes gets all the values in the "attributes" section of myportal.yml - mb
-#
-attributes = $config["attributes"].values
 admin_filter = ""
 if $config['source'].has_key?('admins')
   $config['source']['admins'].each do |n|
@@ -233,7 +253,6 @@ end
 #         Again, error checking includes verifying the .yml file has an "extras" section under "source"
 #         Setting attributes a second time for some reason - mb
 #
-attributes = $config["attributes"].values
 extra_filter = ""
 if $config['source'].has_key?('extras')
   $config['source']['extras'].each do |n|
@@ -265,7 +284,10 @@ end
 #
 # 6/9/10: Prepends something similiar to "(&(modifyTimestamp20100609172200Z)" to filter_string.
 #         Not sure how the filters work just yet - mb
-#
+# 6/10/10: This constructs a filter that is dependant on command line options. If it's being 
+#          run normally, the operator will be such that you only get datay for entries 
+#          modified since the last this was run. otherwise, get all the data because
+#          a reset was done. -- IRJ
 filter_string = "(&(modifyTimestamp#{$options.operator}#{ts})#{filter_string})"
 puts "Filter String: #{filter_string}" if $options.verbose
 
@@ -273,6 +295,7 @@ puts "Filter String: #{filter_string}" if $options.verbose
 # 6/9/10: Still can't find any documentation on this.  It appears to convert filter_string built
 #         above to a different format fo the LDAP search but I have no idea what that format is - mb
 #
+# 6/10/10: This converts the filter into a LDAP compatible filter, using the Net::LDAP::Filter object. -- IRJ
 filter = Net::LDAP::Filter.construct(filter_string)
 accounts = $source.search(:base => $config["source"]["base"], :filter => filter, :attributes => attributes)
 
@@ -283,13 +306,19 @@ accounts = $source.search(:base => $config["source"]["base"], :filter => filter,
 puts "There are #{accounts.length} users in the source directory."
 puts "There are #{state_db.count_users} users in the state database."
 
-
+# For each account we've retrieved from LDAP
 accounts.each do |entry|
-   puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
-   if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
-     netid, user = parse_uids(entry.uid, entry.dn)
-     state_db.update(entry, netid, user, get_mail(entry))
-   end
+  # Print the distinguishedName and Timestamp
+  puts "DN: #{entry.dn}, TS: #{entry.modifyTimestamp}" if $options.verbose
+  # Check the state_db (state database) to see if the entry needs to be updated.
+  if state_db.check(entry.uniqueIdentifier, entry.modifyTimestamp)
+    # Extract the netid and first.last from the LDAP Entry
+    netid, user = parse_uids(entry.uid, entry.dn)
+    # Update the user information in the state database, so that the next process in the 
+    # workflow can extract it and make the Google Changes that need to be made.
+    state_db.update(entry, netid, user, get_mail(entry))
+  end
 end
 
+# Cleanly close the state_db so that it doesn't get corrupted.
 state_db.close
