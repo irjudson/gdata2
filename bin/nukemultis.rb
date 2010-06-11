@@ -1,63 +1,16 @@
 #!/usr/bin/env ruby
-$: << '../lib'
-
-require 'benchmark'
-require 'set'
-
-
+#  
+# Require Other Code/Libraries
 require 'rubygems'
 require 'sqlite3'
-require 'optparse'
-require 'thread'
-require 'timeout'
-require 'ostruct'
-
 require 'sequel'
 
-
-$options = OpenStruct.new
-$queue = Array.new
-$sync = Mutex.new
-$source = nil
-$count = 0
-$forward_domains = Hash.new
-
-# --------------------------------------------------
-#-- overloading Array
-
-class Array
-  def / len
-    a = []
-    each_with_index do |x,i|
-      a << [] if i % len == 0
-      a.last << x
-    end
-    a
-  end
-end #allows for Array / 3 and get back chunks of 3
-# --------------------------------------------------
-
-# --------------------------------------------------
-# functions
-
-#print the list num wide
-
-def pretty_print(list,num)
-  a = list.dup #otherwise slice! will eat your incoming list
-  while a.length > 0
-    STDERR.puts a.slice!(0,num).join(" ")
-  end
-end
-
-def random_password(size = 12)
-   chars = (('a'..'z').to_a + ('0'..'9').to_a) - %w(i o 0 1 l 0)
-   password = (1..size).collect{|a| chars[rand(chars.size)] }.join
-   #  sha1 = Digest::SHA1.hexdigest(password)
-   return password
-end
-
-#
-# get the time converted into a Time class
+## 
+# This converts the timestamp as stored in SQLite3 into a ruby Time object
+# 
+# @param [String] stime Time from SQLite3
+# @return [Time] Ruby Time object with the same value as the input string.
+# 
 def convert_time(stime)
   begin
     if stime
@@ -71,24 +24,48 @@ def convert_time(stime)
   end
 end
 
-# --------------------------------------------------
+##
+# The main nukemultis program
+# 
+# This program is removing duplicate entries from the google_users table in the rosterdb 
+# database.
+# 
 
-
+# Connect the rosterdb.sqlite database to the application through the DB object
 DB = Sequel.sqlite('/home/academic/rosterdb.sqlite')
 
+# Map the users and google table to the cached_users and google_users variables.
+# These variables will behave as Arrays of Hashes with column names as keys into the hash for 
+# each row in the table.
 cached_users = DB[:users]
 google_users = DB[:google]
 
-cached_users.filter {|o| (o.bz + o.bl + o.hv + o.gf) > 1}.each{|r| 
-  if (convert_time(r[:last_modified]) > (Time.now  - (3 * 24 * 60 * 60))) 
-    p google_users[ :username => r[:netid] ]
-    google_users.filter( :username => r[:netid] ).delete
+# Loop over the cached users, filtering out any user who is on more than one campus
+# This is determined because the bz, bl, hv, and gf flags will be set to 1 if the user is 
+# active on that campus, so the sum of the flags will == 1 if they are active on one campus, 
+# 2 if they are on two campuses, and so on.
+users_on_more_than_one_campus = cached_users.filter { |user| (user.bz + user.bl + user.hv + user.gf) > 1 }
 
-    username = r[:netid]
-    if google_users.filter( :username == r[:netid] ).empty?
-      puts "Google #{username} cache deleted"
+# Iterate over each user who is active on only one campus
+users_on_more_than_one_campus.each do |user|
+  # If the user's last modified is more recent than 3 days ago. (3 day * 24 hours * 60 minutes * 60 seconds)
+  if (convert_time(user[:last_modified]) > (Time.now  - (3 * 24 * 60 * 60))) 
+    # Output the current user
+    puts google_users[ :username => user[:netid] ].inspect
+  
+    # Then we remove any other user found with the same netid from the google table
+    google_users.filter( :username => user[:netid] ).delete
+    
+    # Pull out their netid
+    netid = user[:netid]
+    
+    # If we don't find anymore users with the same netid, we've successfully deleted them
+    if google_users.filter( :username == user[:netid] ).empty?
+      puts "Google #{netid} cache deleted"
     end 
+    
+    # Show that we're moving to the next user in the output
     puts "--"
   end
-}
+end
 
