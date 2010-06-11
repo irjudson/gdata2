@@ -7,7 +7,7 @@
 # Location: Roster:/home/academic/gdata2/bin
 # Inputs: /home/academic/gdata2/bin/myportal.yml pass in by commandline parameter in the Academic
 #         users crontab on Roster.  
-# Outputs: a file with the DN's for the "admin" & "extras" people in myportal.yml????
+# Outputs: This updates the state database that is used by bin/gapps-provision to update google apps users.
 # Called From: Academic users crontab on Roster
 # Calls to: statedb.rb which appears to be a custom interface to the Google Apps API utilities
 # Notes: 
