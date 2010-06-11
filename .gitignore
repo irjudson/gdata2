@@ -3,4 +3,11 @@ bin/checkaccounts.rb
 *.sqlite
 *.out
 *~
-bin/rosterdb.sqlite.bak
+bin/r
+bin/w
+bin/output
+bin/*.dump
+bin/google.dmp
+bin/harpo.rtalyml
+bin/*log*
+script/test.rb
