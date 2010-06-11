@@ -1,0 +1,493 @@
+#!/usr/bin/env ruby
+$: << '../lib'
+
+require 'benchmark'
+require 'set'
+
+require 'rubygems'
+require 'sqlite3'
+require 'optparse'
+require 'thread'
+require 'timeout'
+require 'ostruct'
+
+require 'gdata'
+require 'gdata/apps'
+require 'timestamp'
+require 'statedb'
+
+$options = OpenStruct.new
+$queue = Array.new
+$sync = Mutex.new
+$source = nil
+$count = 0
+$forward_domains = Hash.new
+
+# --------------------------------------------------
+# functions
+
+#print the list num wide
+
+def pretty_print(list,num)
+  a = list.dup #otherwise slice! will eat your incoming list
+  while a.length > 0
+    STDERR.puts a.slice!(0,num).join(" ")
+  end
+end
+
+def random_password(size = 12)
+   chars = (('a'..'z').to_a + ('0'..'9').to_a) - %w(i o 0 1 l 0)
+   password = (1..size).collect{|a| chars[rand(chars.size)] }.join
+   #  sha1 = Digest::SHA1.hexdigest(password)
+   return password
+end
+
+#
+#************************************************** start work here ****
+#
+def create_user
+  puts "#{$count} Creating user #{username}." if $options.verbose
+  begin
+    result = apps.provision.create_user(username, first, last, password)
+    puts "Result: #{result}" if $options.debug
+    update = true
+  rescue GData::GDataError => e
+    if e.code == "1300"
+      puts "  => Create User #{username} exists" if $options.verbose
+      update = true
+    elsif e.code == "1000"
+      puts "  => Create User #{username} unknown error" if $options.verbose
+      update = false
+      #retry
+    else
+      puts "Error creating user: #{username}" if $options.verbose
+      raise e
+    end
+  rescue OpenSSL::SSL::SSLError => e
+    retry
+  end
+end
+
+# updates it so they don't have to change their password at next login
+def update_password
+  puts "    Setting password reset to false for |#{username}|." if $options.verbose
+  if config['source']['admins'].include?(nickname)
+    admin = true
+  else
+    admin = false
+  end
+  begin
+    result = apps.provision.update_user(username, first, last, nil, nil, admin.to_s, nil, "false", nil )
+    puts "Result: #{result}" if $options.debug
+    update = true
+  rescue GData::GDataError => e
+    if e.code == "1300"
+      puts "  => Set password reset to false #{username} exists" if $options.verbose
+      update = true
+    elsif e.code == "1000"
+      puts "  => setting password reset to false  #{username} unknown error" if $options.verbose
+      update = false
+      #retry
+    else
+      puts "Error creating user: #{username}" if $options.verbose
+      raise e
+    end
+  rescue OpenSSL::SSL::SSLError => e
+    retry
+  end
+end
+
+def add_alias(apps,username,nickname)
+  #where nickname is the alias like h56t789, ben.livingood  is
+  # translated to h56t789 is also known as ben.livingood
+  begin
+    puts "    Adding alias |#{nickname}| to |#{username}|." if $options.verbose
+    result = apps.provision.create_nickname(username, nickname)
+       puts "Result: #{result}" if $options.debug
+    update = true
+  rescue GData::GDataError => e
+    if e.code == "1300"
+      puts "  => adding alias #{nickname} to  #{username} exists" if $options.verbose
+      update = true
+    elsif e.code == "1000"
+      puts "  => adding alias #{nickname} to  #{username} unknown error" if $options.verbose
+      update = false
+      #retry
+    else
+      puts "Error creating user: #{username}" if $options.verbose
+      raise e
+    end
+  rescue OpenSSL::SSL::SSLError => e
+    retry
+  end
+end
+
+#for those days you want to set a user to forward his mail off to
+#some other site I guess
+def create_forward
+
+  active = false
+  entry.montanaEduPersonClassicRoles.each do |role|
+    if $forward_domains.has_key?(role[0..3])
+      active = true
+      forward = "#{username}@#{$forward_domains[role[0..3]]}"
+    elsif role[3,1] == "e"
+      active = false
+      forward = entry.mail
+    end
+    begin
+      # Add the email address they're used to seeing
+      puts "    Adding mailforward |#{forward}| to |#{username}|." if $options.verbose
+      result = apps.mail.update_forward(username, forward, "KEEP", active)
+      puts "Result: #{result}" if $options.debug
+      update = true
+    rescue GData::GDataError => e
+      if e.code == "1300"
+        puts "  => adding mailforward #{forward} to  #{username} exists" if $options.verbose
+        update = true
+      elsif e.code == "1000"
+        puts "  => adding mailforward #{forward} to  #{username} unknown error" if $options.verbose
+        update = false
+        #retry
+      else
+        puts "Error creating user: #{username}" if $options.verbose
+        raise e
+      end
+    rescue OpenSSL::SSL::SSLError => e
+      retry
+    end
+  end
+end
+
+
+def send_as_alias(app,config, userH)
+  if config['apps']['domain'] != config['apps']['maildomain']
+    send_as_name = "#{first} #{last}"
+    send_as_alias = "#{nickname}@#{config['apps']['maildomain']}"
+    begin
+      # Add the email address they're used to seeing
+      puts "    Adding send_as_alias |#{send_as_name}| / |#{send_as_alias}| to |#{username}|." if $options.verbose
+      result = apps.mail.create_send_as(username, send_as_name, send_as_alias, send_as_alias, true)
+      puts "Result: #{result}" if $options.debug
+       update = true
+    rescue GData::GDataError => e
+      if e.code == "1300"
+        puts "  => creating send as alias #{send_as_name} for  #{username} exists" if $options.verbose
+        update = true
+      elsif e.code == "1000"
+        puts "  => creating send as alias #{send_as_name} for  #{username} uknown error" if $options.verbose
+        update = false
+        #retry
+      else
+        puts "Error creating user: #{username}" if $options.verbose
+        raise e
+      end
+    rescue OpenSSL::SSL::SSLError => e
+      retry
+    end
+  end
+end
+
+def create_and_update_user(apps, entry, config)
+   uid_dn, uid_alias = parse_uids(entry.uid, entry.dn)
+   username = uid_dn
+   first = entry.givenname
+   last = entry.sn
+   password = random_password
+   nickname = uid_alias
+   update = false
+
+
+   #if uid_dn != uid_alias
+
+
+   $sync.synchronize {
+      $count += 1
+   }
+   if (($count % 100) == 0)
+      puts "#{Time.now.strftime("%a, %d %b %Y, %l:%M%P").squeeze(' ')} : Processed #{$count}"
+   end
+
+   return update
+end # /end create_and_update_user
+
+
+def convert_time(stime)
+
+  stime =~ /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+  return Time.gm($1,$2,$3,$4,$5,$6).to_i
+
+end
+
+def refresh_absent_keys(absent_google_keys, apps, state_db)
+  really_absent = []
+
+  absent_google_keys.sort{rand(5)}.each do |entry|
+    user = apps.provision.retrieve_user(entry)
+    if user.respond_to? :username
+      nicks = apps.provision.retrieve_nicknames(user.username)
+      if nicks
+        na = nicks.map{ |n| n.nickname }
+      end
+
+      state_db.update_google(user.username, user.given_name, user.family_name, apps.domain, user.admin, na)
+
+    else
+      really_absent << entry
+    end
+  end
+
+  #puts really_absent.join(', ')
+  return really_absent
+end
+
+def find_changed(google_table, user_table)
+  changed = []
+
+  user_table.keys.each do |key|
+    if google_table[key]
+      if user_table[key]["last"] != google_table[key]["last_name"] or
+           user_table[key]["first"] != google_table[key]["first_name"]
+<<<<<<< HEAD:bin/gapps-provision
+        STDERR.puts "*CHANGED* First: #{user_table[key]["first"]} Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}" if $options.debug
+=======
+        puts "*CHANGED* First: #{user_table[key]["first"]} Last name: #{user_table[key]["last"]} #{google_table[key]["last_name"]}"
+>>>>>>> working:bin/gapps-provision
+        changed << key
+      end
+    end
+  end
+  return changed
+end
+
+def update(google_table, user_table, app, state_db)
+  keys = user_table.keys.to_set - google_table.keys.to_set
+  keys = keys.to_a
+
+  if $options.debug
+    STDERR.puts "Total people not listed as provisioned for #{app.domain}: #{keys.length}"
+    STDERR.puts "****"
+  end
+
+  return refresh_absent_keys(keys, app, state_db)
+end
+
+def find_new(google_table, user_table, app, state_db) # ireally need to just make a classs as much as i pass around these tables
+  not_found = []
+  not_found = update(google_table, user_table, app, state_db)
+
+  return not_found
+
+end #find_new
+
+def user_hash_data(app,userA,googleA,config)
+  # select people that are from (app.domain db_key) (apps' domain)
+  users = userA.select{ |user| user[ config["domains"][app.domain]["db_key"] ] == "1" }
+
+  user_table = users.inject({}){|h, item| h[item["netid"]] = item ; h } #might want to do a googleA.keys == app.domain check and subtrack it from the user_t keys
+  google_table = googleA.inject({}){|h, item| h[item["username"]] = item  if item["domain"] == app.domain ; h } #create a hash of keys that are app.domain
+  return [ user_table, google_table ]
+end
+
+
+# --------------------------------------------------
+
+
+# --------------------------------------------------
+# Parse commandline options
+OptionParser.new do |opts|
+   $options.verbose = false
+   $options.config = 'config.yml'
+   $options.reset = false
+   $options.statedbfn = nil
+   $options.doit = true
+   $options.threads = 1
+   $options.forward = false
+
+   opts.banner = "Usage: gapps-provision.rb [options]"
+
+   opts.on("-r", "--reset", "Reset state for synchronization.") do |o|
+      $options.reset = true
+      $options.operator = "<="
+   end
+
+   opts.on("-c", "--config [FILE]", "Specify a config file.") do |o|
+      $options.config = o.to_s
+   end
+
+   opts.on("-v", "--verbose", "Operate verbosely ;not implemented;") do |o|
+      $options.verbose = true
+   end
+
+   opts.on("-d", "--debug", "debugging output") do |o|
+      $options.debug = true
+   end
+
+
+   opts.on("-s", "--statdb [DBFILE]", "State Database file.") do |o|
+      $options.statedbfn = o
+   end
+
+   opts.on("-n", "--not-really", "Don't really perform the operations, just pretend.") do |o|
+      $options.doit = false
+   end
+
+   opts.on("-t", "--threads [# THREADS]", "The number of threads to run in parallel.") do |o|
+      $options.threads = o.to_i
+   end
+
+   opts.on_tail("--version", "Show version") do
+      puts OptionParser::Version.join('.')
+   end
+end.parse!
+
+# Load configuration file
+config = YAML.load_file($options.config)
+
+# Create the Google Apps user and objects
+apps = []
+config["domains"].keys.each { |domain|
+  user = config["domains"][domain]["user"]+"@"+config["domains"][domain]["domain"]
+  apps << GData::GApps.new(user, config["domains"][domain]["password"])
+
+}
+
+
+# Create a local state store for keeping track of things between runs
+state_db = State.new($options.statedbfn)
+
+
+
+#--------------------------------------------------
+# act on options
+
+if $options.statedbfn.nil?
+  $options.statedbfn = config["state"]["file"]
+end
+
+if $options.reset
+
+  # Rebuild Google data in statedb from google
+  benchmark = Benchmark.realtime do
+    state_db.reset_google
+  end
+  puts "reset took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
+  benchmark = Benchmark.realtime do
+    state_db.init_google
+  end
+  puts "init took " + sprintf("%.5f", benchmark) + "second(s)." if $options.debug
+
+  apps.each { |app|
+    users = app.provision.retrieve_all_users
+
+    users.each_with_index do |user,i|
+      puts Time.now if (i % 5 == 0) && $options.debug
+      nicks = app.provision.retrieve_nicknames(user.username)
+      na = nicks.map{ |n| n.nickname }
+      state_db.update_google(user.username, user.given_name, user.family_name, app.domain, user.admin, na)
+    end
+  }
+
+end #resetting/creating the db
+
+# --------------------------------------------------
+
+userA = Array.new
+googleA = Array.new
+
+state_db.users {|user| userA << user}
+state_db.google { |goog| googleA = goog }
+
+#--
+# for each domain we have check and see if they are present in the db and if so refresh them
+#
+#i really should roll this all into a class
+total_new     = []
+total_changed = []
+
+apps.each {  |app|
+
+  (user_table, google_table) = user_hash_data(app,userA, googleA,config)
+
+  STDERR.puts "Users for #{app.domain} - #{user_table.keys.length}"  if $options.debug
+
+  # not_found = find_new(google_table, user_table, app, state_db)
+
+<<<<<<< HEAD:bin/gapps-provision
+  # if $options.debug
+  #   STDERR.puts "** Users that still requiring provisioning : "
+  #   pretty_print(not_found.map { |key|
+  #                  user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
+  #                }, 5)
+  #   STDERR.puts "****"
+  # end
+=======
+  if $options.debug
+    STDERR.puts "** Users that still requiring provisioning : "
+    pretty_print(not_found.map { |key|
+                   user_table[key]["first_last"]+"@"+config["domains"][app.domain]["maildomain"]
+                 }, 5)
+    STDERR.puts "****"
+  end
+>>>>>>> working:bin/gapps-provision
+
+  changed = find_changed(google_table, user_table)
+
+  if $options.debug
+    STDERR.puts "Total New/Changed Actionable Entries: #{changed.length}"
+    pretty_print(not_found + changed,5)
+    STDERR.puts "****"
+  end
+
+  total_changed = total_changed + changed
+#  total_new = total_new + not_found
+
+}
+
+<<<<<<< HEAD:bin/gapps-provision
+# ijust realized that if you are changed you might need to work across
+# each app and changed each last name and/or first name
+=======
+>>>>>>> working:bin/gapps-provision
+puts "Needs Created: #{total_new.length}"
+pretty_print(total_new, 5)
+<<<<<<< HEAD:bin/gapps-provision
+
+puts "Needs Changed: #{total_changed.length}"
+pretty_print(total_changed, 5)
+
+apps.each do |app|
+
+  (user_table, google_table) = user_hash_data(app,userA, googleA,config)
+
+  total_changed.each do |change|
+    #puts 'apps.provision.update_user(key,user_table[key]["first"], user_table[key]["last"]'
+    if user_table[change]
+      puts user_table[change]["first"] +" "+ user_table[change]["last"]
+      puts google_table[change]["first_name"] +" "+ google_table[change]["last_name"]
+    end
+  end
+=======
+>>>>>>> working:bin/gapps-provision
+
+<<<<<<< HEAD:bin/gapps-provision
+end
+=======
+puts "Needs Changed: #{total_changed.length}"
+pretty_print(total_changed, 5)
+>>>>>>> working:bin/gapps-provision
+
+<<<<<<< HEAD:bin/gapps-provision
+=======
+# apps.each do |app|
+#     total_changed.each do |change|
+#     #puts 'apps.provision.update_user(key,user_table[key]["first"], user_table[key]["last"]'
+
+#     puts user_table[change][ config["domain"][app.domain]["db_key"] ]
+
+#   end
+# end
+
+>>>>>>> working:bin/gapps-provision
+state_db.close
+# --------------------------------------------------

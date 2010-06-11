@@ -3,3 +3,10 @@ bin/checkaccounts.rb
 *.sqlite
 *.out
 *~
+bin/r
+bin/w
+bin/output
+bin/*.dump
+bin/google.dmp
+bin/harpo.rtalyml
+bin/*log*
