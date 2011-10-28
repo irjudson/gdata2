@@ -12,14 +12,14 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files = ["History.txt", "Manifest.txt", "README.txt"]
   s.rdoc_options = ["--main", "README.txt"]
   s.remote_rdoc_dir = ''
-  s.files = ["CREDITS", "History.txt", "Manifest.txt", "README.txt", 
-             "Rakefile", "TODO", "gdata2.gemspec", "lib/gdata.rb", 
+  s.files = ["CREDITS", "History.txt", "Manifest.txt", "README.txt",
+             "Rakefile", "TODO", "gdata2.gemspec", "lib/gdata.rb",
              "lib/gdata/apps/provisioning.rb"]
   s.require_paths = ["lib"]
   s.rubyforge_project = "gdata2"
   s.rubygems_version = "1.3.1"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  
+
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 2
