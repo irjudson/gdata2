@@ -1,6 +1,6 @@
 in order to provision a person you need to set the google enabled flag
 in ~/rosterdb.sqlite and what campus you want them to be affiliated with
- 
+
  sqlite3 ~/rosterdb.sqlite
  update USERS set google=1,bz=1 where netid like "k67j798";
  .exit

@@ -192,7 +192,7 @@ module GData #:nodoc:
       #               mynicks.each {|nick| puts nick.nickname }
       def retrieve_nicknames(username)
         xml_response = @apps.request(:nickname_retrieve_all_for_user, username, @headers)
-        
+
         nicknames_feed = Feed.new(xml_response.elements["feed"],  NicknameEntry)
         nicknames_feed = add_next_feeds(nicknames_feed, xml_response, NicknameEntry)
       end

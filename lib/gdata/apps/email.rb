@@ -105,9 +105,9 @@ module GData #:nodoc:
            if replyTo.nil?
              replyTo = address
            end
-           
+
            self.elements["atom:entry"].add_element "apps:property", { "name" => "name", "value" => name }
-           self.elements["atom:entry"].add_element "apps:property", { "name" => "address", "value" => address } 
+           self.elements["atom:entry"].add_element "apps:property", { "name" => "address", "value" => address }
            self.elements["atom:entry"].add_element "apps:property", { "name" => "replyTo", "value" => replyTo }
            self.elements["atom:entry"].add_element "apps:property", { "name" => "makeDefault", "value" => makeDefault.to_s }
          end
